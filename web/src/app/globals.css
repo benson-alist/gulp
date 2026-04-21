@@ -1,0 +1,83 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Gulp — Warm Thrift palette:
+     - background:  warm unglazed ceramic cream
+     - foreground:  deep forest-teal, primary ink
+     - accent:      terracotta — warm rust, the ambient accent and CTA
+     - accent-ink:  porcelain foam (text on top of the terracotta)
+     - muted:       warm grey-brown, for captions and metadata
+     - card:        porcelain, raised surfaces
+     - border:      oat, hairline dividers
+     - success:     sage, reserved for positive states (claims, verified)
+     - danger:      deep rust, reserved for errors and destructive actions */
+  --background: #f2ead8;
+  --foreground: #1f3b37;
+  --accent: #c26b4e;
+  --accent-ink: #fbf5e7;
+  --muted: #7a6f5a;
+  --card: #fbf5e7;
+  --border: #e3d9bf;
+  --success: #8ea87a;
+  --danger: #8c3b2a;
+}
+
+html,
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+body {
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.mono {
+  font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo,
+    monospace;
+}
+
+.ticker-track {
+  animation: ticker 55s linear infinite;
+}
+
+@keyframes ticker {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.grain {
+  background-image: radial-gradient(
+    rgba(0, 0, 0, 0.045) 1px,
+    transparent 1px
+  );
+  background-size: 3px 3px;
+}
+
+.card-hover {
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease,
+    border-color 160ms ease;
+}
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 28px rgba(31, 59, 55, 0.12);
+  border-color: var(--foreground);
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
