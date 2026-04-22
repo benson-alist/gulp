@@ -12,13 +12,12 @@ export default function SellPage() {
         List a cup
       </div>
       <h1 className="mt-1 text-3xl sm:text-4xl font-black tracking-tight">
-        Confess your cupboard.
+        Give your cup a second act.
       </h1>
       <p className="mt-2 text-[color:var(--muted)]">
-        It was a pour decision at the time. It&apos;s about to become
-        someone else&apos;s. They&apos;ll list it here too, in a year or so
-        — that&apos;s how the cup turns. Gulp takes 9.99% because trust
-        isn&apos;t free and neither is that Stanley.
+        Every cup has a next chapter. List it, name a price, and let a
+        stranger fall for its particular energy. Gulp takes 9.99%, because
+        trust isn&apos;t free and, tragically, neither is that Stanley.
       </p>
       <div className="mt-6">
         <SellForm />

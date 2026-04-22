@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
@@ -51,10 +52,24 @@ export default async function ListingPage({
       <div className="mt-4 grid md:grid-cols-[1.05fr_1fr] gap-6 md:gap-10">
         {/* LEFT: hero + spec list + seller */}
         <div className="space-y-6">
-          <div className="rounded-2xl border border-[color:var(--border)] bg-gradient-to-br from-[#f2ead8] via-[#e8d4b8] to-[#c26b4e]/55 aspect-square flex items-center justify-center relative">
-            <span className="text-[10rem] sm:text-[14rem] leading-none" aria-hidden>
-              {item.image_emoji}
-            </span>
+          <div className="rounded-2xl border border-[color:var(--border)] bg-gradient-to-br from-[#f2ead8] via-[#e8d4b8] to-[#c26b4e]/55 aspect-square flex items-center justify-center relative overflow-hidden">
+            {item.image_url ? (
+              <Image
+                src={item.image_url}
+                alt={item.title}
+                fill
+                sizes="(max-width: 768px) 100vw, 55vw"
+                className="object-cover"
+                priority
+              />
+            ) : (
+              <span
+                className="text-[10rem] sm:text-[14rem] leading-none"
+                aria-hidden
+              >
+                {item.image_emoji}
+              </span>
+            )}
             <span className="absolute top-4 left-4 mono text-xs uppercase tracking-wider bg-white/95 px-3 py-1.5 rounded-full">
               {DRINKWARE_LABELS[item.drinkware_type]} · {item.size_oz}oz
             </span>
@@ -70,7 +85,7 @@ export default async function ListingPage({
 
           <div className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--card)] p-5">
             <div className="mono text-[11px] uppercase tracking-wider text-[color:var(--muted)]">
-              The specs
+              The forensics
             </div>
             <dl className="mt-3 grid grid-cols-2 gap-y-2 gap-x-4 text-sm">
               <SpecRow label="Brand" value={item.brand} />
@@ -118,14 +133,14 @@ export default async function ListingPage({
             </div>
             <div className="text-right">
               <div className="mono text-[10px] uppercase text-[color:var(--muted)]">
-                Shame
+                Character
               </div>
               <div className="font-black">{item.shame_index}/10</div>
             </div>
           </div>
         </div>
 
-        {/* RIGHT: title, price, confession, claim panel */}
+        {/* RIGHT: title, price, claim panel */}
         <div>
           <div className="mono text-[11px] uppercase tracking-[0.2em] text-[color:var(--muted)]">
             {item.brand} · {item.colorway || item.material}
@@ -144,7 +159,7 @@ export default async function ListingPage({
                   paid {formatUSD(item.original_price)}
                 </span>
                 <span className="text-[color:var(--accent)] font-bold uppercase tracking-wider">
-                  -{pct}% off regret
+                  {pct}% off
                 </span>
               </div>
             )}
@@ -163,15 +178,6 @@ export default async function ListingPage({
             <ShameMeter value={item.shame_index} />
           </div>
 
-          {item.confession && (
-            <blockquote className="mt-6 border-l-4 border-[color:var(--accent)] pl-4 italic leading-relaxed text-[15px]">
-              &ldquo;{item.confession}&rdquo;
-              <footer className="mt-2 mono text-[11px] not-italic uppercase text-[color:var(--muted)]">
-                — @{item.seller.username}, under oath
-              </footer>
-            </blockquote>
-          )}
-
           <div className="mt-6">
             <ClaimPanel
               itemId={item.id}
@@ -182,21 +188,17 @@ export default async function ListingPage({
 
           <div className="mt-6 border-t border-[color:var(--border)] pt-5">
             <div className="mono text-[11px] uppercase text-[color:var(--muted)]">
-              Gulp cupboard promise
+              The Gulp cupboard promise
             </div>
             <ul className="mt-2 space-y-1 text-sm text-[color:var(--muted)]">
-              <li>· No authentication theatre — a cup is a cup.</li>
-              <li>· Dishwasher scars disclosed in writing.</li>
-              <li>· Sticker residue surveyed under UV.</li>
+              <li>· No authentication theatre — a cup is a cup is a cup.</li>
+              <li>· Dishwasher scars disclosed in writing, notarised in vibes.</li>
+              <li>· Sticker residue surveyed under UV, never under judgment.</li>
+              <li>· Plays well with whatever&apos;s already on your shelf.</li>
               <li>
-                · You already own {item.drinkware_type === "water_bottle"
-                  ? "four water bottles"
-                  : item.drinkware_type === "mug"
-                    ? "nine mugs"
-                    : "enough of these"}
-                . We&apos;re not going to stop you.
+                · When it&apos;s time for its next adventure, we&apos;ll be
+                here.
               </li>
-              <li>· You&apos;ll be the seller next. We&apos;ll be here.</li>
             </ul>
           </div>
         </div>
@@ -206,7 +208,7 @@ export default async function ListingPage({
         <div className="mt-14">
           <div className="flex items-end justify-between">
             <h2 className="text-xl sm:text-2xl font-black tracking-tight">
-              More {DRINKWARE_LABELS[item.drinkware_type]}s on the shelf
+              More {DRINKWARE_LABELS[item.drinkware_type]}s looking for homes
             </h2>
             <Link
               href={`/browse?drinkware_type=${item.drinkware_type}`}
@@ -220,16 +222,30 @@ export default async function ListingPage({
               <Link
                 key={l.id}
                 href={`/listing/${l.id}`}
-                className="card-hover rounded-xl border border-[color:var(--border)] bg-[color:var(--card)] p-4 flex flex-col items-start"
+                className="card-hover rounded-xl border border-[color:var(--border)] bg-[color:var(--card)] overflow-hidden flex flex-col"
               >
-                <div className="text-4xl" aria-hidden>
-                  {l.image_emoji}
+                <div className="aspect-[5/4] relative bg-gradient-to-br from-[#f2ead8] via-[#e8d4b8] to-[#c26b4e]/55 flex items-center justify-center">
+                  {l.image_url ? (
+                    <Image
+                      src={l.image_url}
+                      alt={l.title}
+                      fill
+                      sizes="(max-width: 768px) 50vw, 25vw"
+                      className="object-cover"
+                    />
+                  ) : (
+                    <span className="text-4xl" aria-hidden>
+                      {l.image_emoji}
+                    </span>
+                  )}
                 </div>
-                <div className="mt-2 text-sm font-semibold line-clamp-2">
-                  {l.title}
-                </div>
-                <div className="mt-1 mono text-xs text-[color:var(--muted)]">
-                  {formatUSD(l.price)}
+                <div className="p-4 flex flex-col items-start">
+                  <div className="text-sm font-semibold line-clamp-2">
+                    {l.title}
+                  </div>
+                  <div className="mt-1 mono text-xs text-[color:var(--muted)]">
+                    {formatUSD(l.price)}
+                  </div>
                 </div>
               </Link>
             ))}

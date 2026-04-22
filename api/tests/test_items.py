@@ -76,9 +76,9 @@ def test_items_filter_by_drinkware_type(client: TestClient, make_item) -> None:
 
 
 def test_items_search_query(client: TestClient, make_item) -> None:
-    """Free-text `q` matches across title, brand, colorway, and confession."""
+    """Free-text `q` matches across title, brand, and colorway."""
     make_item(title="World's Best Dad Mug", brand="Hallmarko")
-    make_item(title="Conference Swag", confession="Never used it")
+    make_item(title="Conference Swag", brand="DevCon")
 
     res = client.get("/items?q=swag").json()
     assert res["total"] == 1
@@ -116,13 +116,12 @@ def test_item_create_rejects_shame_out_of_range(
 
 def test_stats_aggregates(client: TestClient, make_item) -> None:
     """`/stats` reflects created items and their aggregates."""
-    make_item(price=10, years_in_cupboard=3, shame_index=8, confession="yes")
-    make_item(price=20, years_in_cupboard=2, shame_index=4, confession="")
+    make_item(price=10, years_in_cupboard=3, shame_index=8)
+    make_item(price=20, years_in_cupboard=2, shame_index=4)
 
     body = client.get("/stats").json()
     assert body["total_items"] == 2
     assert body["cupboard_years_liberated"] == 5
-    assert body["confessions_on_file"] == 1
     assert body["value_liberated_usd"] == 30.0
     assert body["average_shame"] == 6.0
 

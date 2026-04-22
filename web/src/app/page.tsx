@@ -1,6 +1,6 @@
 import Link from "next/link";
+import Image from "next/image";
 import {
-  DRINKWARE_EMOJI,
   DRINKWARE_LABELS,
   DrinkwareType,
   SOURCE_LABELS,
@@ -27,7 +27,6 @@ export default async function Home() {
       total_items: 0,
       cupboard_years_liberated: 0,
       average_shame: 0,
-      confessions_on_file: 0,
       total_offers: 0,
       value_liberated_usd: 0,
     }),
@@ -45,20 +44,16 @@ export default async function Home() {
     "impulse_buy",
   ];
 
-  const confessionRoll = freshest
-    .filter((i) => i.confession)
-    .slice(0, 6);
-
   return (
     <div>
       {/* HERO */}
       <section className="relative overflow-hidden border-b border-[color:var(--border)]">
         <div className="grain absolute inset-0 opacity-40 pointer-events-none" />
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 md:py-20 relative">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-10 md:pt-20 pb-6 md:pb-8 relative">
           <div className="grid md:grid-cols-[1.1fr_1fr] gap-8 md:gap-12 items-center">
             <div>
               <div className="mono text-[11px] uppercase tracking-[0.2em] text-[color:var(--muted)]">
-                Gulp · a circular economy of regret
+                Gulp · a circular economy for drinkware
               </div>
               <h1 className="mt-3 text-4xl sm:text-5xl md:text-6xl font-black leading-[0.95] tracking-tight">
                 The marketplace
@@ -68,19 +63,16 @@ export default async function Home() {
                 </span>
               </h1>
               <p className="mt-4 text-base sm:text-lg text-[color:var(--muted)] max-w-xl">
-                A little flea market for the mugs, bottles, shot glasses and
-                oversized wine glasses that are hogging your cupboard. Post
-                a confession, set a price, pass the regret on. You&apos;re
-                not buying drinkware — you&apos;re <em>adopting</em>{" "}
-                somebody else&apos;s pour decision. See you back here in
-                18&nbsp;months.
+                A little flea market for the mugs, bottles, shot glasses, and
+                oversized wine glasses looking for a new cupboard. Name a
+                price. Find a match. Every cup deserves a second pour.
               </p>
               <div className="mt-6 flex flex-wrap gap-3">
                 <Link
                   href="/browse"
                   className="bg-[color:var(--foreground)] text-[color:var(--background)] px-5 py-3 rounded-full font-semibold hover:bg-[color:var(--accent)] hover:text-[color:var(--accent-ink)] transition"
                 >
-                  Adopt a regret
+                  Adopt a cup
                 </Link>
                 <Link
                   href="/sell"
@@ -91,47 +83,53 @@ export default async function Home() {
               </div>
             </div>
 
-            {/* STAT CARD */}
+            {/* HERO ILLUSTRATION */}
             <div className="relative">
               <div className="absolute -top-6 -left-6 w-72 h-72 rounded-full bg-[color:var(--accent)]/30 blur-2xl hidden md:block" />
-              <div className="relative rounded-3xl border border-[color:var(--foreground)] bg-[color:var(--card)] p-5 sm:p-6 shadow-[6px_6px_0_0_var(--foreground)]">
-                <div className="flex items-center justify-between mono text-[10px] uppercase tracking-widest">
-                  <span className="text-[color:var(--muted)]">
-                    Cupboard circulation index
-                  </span>
-                  <span className="text-[color:var(--accent)]">LIVE</span>
+              <div className="relative max-w-md mx-auto md:max-w-none">
+                <Image
+                  src="/hero.png"
+                  alt="A group of cute mismatched drinkware characters huddled together on a shelf"
+                  width={1024}
+                  height={1024}
+                  priority
+                  sizes="(min-width: 768px) 520px, 100vw"
+                  className="w-full h-auto select-none"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* CIRCULATION STRIP — live stats dashboard */}
+          <div className="mt-10 md:mt-14 rounded-3xl border border-[color:var(--foreground)] bg-[color:var(--card)] p-5 sm:p-6 shadow-[6px_6px_0_0_var(--foreground)]">
+            <div className="flex items-center justify-between mono text-[10px] uppercase tracking-widest">
+              <span className="text-[color:var(--muted)]">
+                Cupboard circulation index
+              </span>
+              <span className="text-[color:var(--accent)]">LIVE</span>
+            </div>
+            <div className="mt-4 flex flex-wrap items-end justify-between gap-6">
+              <div>
+                <div className="mono text-[10px] uppercase text-[color:var(--muted)] tracking-widest">
+                  Value in circulation
                 </div>
-                <div className="mt-4 grid grid-cols-2 gap-4">
-                  <Stat label="Listings" value={String(stats.total_items)} />
-                  <Stat
-                    label="Confessions"
-                    value={String(stats.confessions_on_file)}
-                  />
-                  <Stat
-                    label="Cupboard-years freed"
-                    value={String(stats.cupboard_years_liberated)}
-                  />
-                  <Stat
-                    label="Avg. shame"
-                    value={`${stats.average_shame}/10`}
-                  />
+                <div className="text-3xl sm:text-4xl md:text-5xl font-black">
+                  {formatUSD(stats.value_liberated_usd)}
                 </div>
-                <div className="mt-5 border-t border-[color:var(--border)] pt-4 flex items-end justify-between">
-                  <div>
-                    <div className="mono text-[10px] uppercase text-[color:var(--muted)] tracking-widest">
-                      Regret in circulation
-                    </div>
-                    <div className="text-3xl sm:text-4xl font-black">
-                      {formatUSD(stats.value_liberated_usd)}
-                    </div>
-                    <div className="mono text-[10px] text-[color:var(--muted)] mt-1">
-                      Same cups. Different cupboards.
-                    </div>
-                  </div>
-                  <div className="text-4xl" aria-hidden>
-                    🥤
-                  </div>
+                <div className="mono text-[10px] text-[color:var(--muted)] mt-1">
+                  Same cups. New cupboards. Fresh pours.
                 </div>
+              </div>
+              <div className="grid grid-cols-3 gap-6 sm:gap-10">
+                <Stat label="Cups in play" value={String(stats.total_items)} />
+                <Stat
+                  label="Lowballs lobbed"
+                  value={String(stats.total_offers)}
+                />
+                <Stat
+                  label="Cupboard-years freed"
+                  value={String(stats.cupboard_years_liberated)}
+                />
               </div>
             </div>
           </div>
@@ -142,7 +140,7 @@ export default async function Home() {
       <section className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
         <SectionHeader
           eyebrow="Shop by drinkware"
-          title="Every shape of regret. Now yours."
+          title="Mugs, bottles, and every vessel in between."
         />
         <div className="mt-4 grid grid-cols-3 sm:grid-cols-5 md:grid-cols-9 gap-2">
           {(
@@ -163,11 +161,17 @@ export default async function Home() {
               <Link
                 key={t}
                 href={`/browse?drinkware_type=${t}`}
-                className="card-hover rounded-2xl border border-[color:var(--border)] bg-[color:var(--card)] p-3 flex flex-col items-center text-center gap-1 min-h-[88px] justify-center"
+                className="card-hover rounded-2xl border border-[color:var(--border)] bg-[color:var(--card)] p-3 pt-2 flex flex-col items-center text-center gap-1 min-h-[140px] justify-between"
               >
-                <span className="text-2xl" aria-hidden>
-                  {DRINKWARE_EMOJI[t]}
-                </span>
+                <div className="relative w-20 h-20 shrink-0" aria-hidden>
+                  <Image
+                    src={`/categories/${t}.png`}
+                    alt=""
+                    fill
+                    sizes="80px"
+                    className="object-contain"
+                  />
+                </div>
                 <span className="text-[11px] font-bold leading-tight">
                   {DRINKWARE_LABELS[t]}
                 </span>
@@ -184,7 +188,7 @@ export default async function Home() {
       <section className="max-w-6xl mx-auto px-4 sm:px-6 pb-8">
         <SectionHeader
           eyebrow="Shop by how it got there"
-          title="Roast by origin."
+          title="Every cup has a backstory."
         />
         <div className="mt-4 flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap">
           {sources.map((s) => (
@@ -199,11 +203,11 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* FRESHEST REGRETS */}
+      {/* FRESHLY LISTED */}
       <section className="max-w-6xl mx-auto px-4 sm:px-6 py-4">
         <div className="flex items-end justify-between gap-4">
           <SectionHeader
-            eyebrow="Freshest regrets"
+            eyebrow="Freshly listed"
             title="Just off the shelf."
           />
           <Link
@@ -220,12 +224,12 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* LONGEST SHELF SENTENCES */}
+      {/* LONG-TIME SHELF RESIDENTS */}
       <section className="max-w-6xl mx-auto px-4 sm:px-6 py-10 md:py-14">
         <div className="flex items-end justify-between gap-4">
           <SectionHeader
-            eyebrow="Longest shelf sentences"
-            title="Held hostage the longest."
+            eyebrow="Long-time shelf residents"
+            title="Been around the cupboard."
           />
           <Link
             href="/browse?sort=longest_shelf"
@@ -241,62 +245,30 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* CONFESSIONS WALL */}
-      {confessionRoll.length > 0 && (
-        <section className="max-w-6xl mx-auto px-4 sm:px-6 py-4">
-          <SectionHeader
-            eyebrow="Confessions wall"
-            title="Overheard in the cupboard."
-          />
-          <div className="mt-5 grid md:grid-cols-2 gap-3">
-            {confessionRoll.map((item) => (
-              <Link
-                key={item.id}
-                href={`/listing/${item.id}`}
-                className="card-hover rounded-2xl border border-[color:var(--border)] bg-[color:var(--card)] p-4 sm:p-5 flex gap-4"
-              >
-                <div className="text-4xl shrink-0" aria-hidden>
-                  {item.image_emoji}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="italic leading-snug line-clamp-3">
-                    &ldquo;{item.confession}&rdquo;
-                  </p>
-                  <div className="mt-2 mono text-[11px] uppercase text-[color:var(--muted)] flex items-center gap-2">
-                    <span>@{item.seller.username}</span>
-                    <span>·</span>
-                    <span>{item.brand}</span>
-                    <span>·</span>
-                    <span>{formatUSD(item.price)}</span>
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
-
       {/* HOW IT WORKS */}
       <section className="max-w-6xl mx-auto px-4 sm:px-6 py-12 md:py-16">
         <SectionHeader
           eyebrow="How it works"
-          title="Three steps, two cupboards, one ongoing mistake."
+          title="Three steps, two cupboards, one happy handoff."
         />
         <div className="mt-6 grid md:grid-cols-3 gap-3 sm:gap-4">
           <HowCard
             num="01"
-            title="Confess"
-            body="Tell us what it is, how long it's been there, and how guilty you feel (1–10). Pick a vibe emoji. We won't ask for photos."
+            title="List it"
+            image="/how/list.png"
+            body="Tell us what it is, how long it's been on your shelf, and what kind of character it has (1–10). Pick a vibe emoji. We won't ask for photos — a cup is a cup."
           />
           <HowCard
             num="02"
-            title="List a single price"
-            body="Set what you want for it. Add what you paid if you want the app to roast you with a strikethrough — future-you, buying this exact cup back, will appreciate the disclosure."
+            title="Name one price"
+            image="/how/price.png"
+            body="Set what you want for it. Add what you paid for a tasteful old-price strikethrough — a good story sells a mug faster than any photo could."
           />
           <HowCard
             num="03"
-            title="Rehome (and repeat)"
-            body="A stranger claims it at asking, or they send a lowball with a polite note. You say yes. Your cupboard breathes — until they sell it back to someone, and that someone sells it back to you."
+            title="Hand it off"
+            image="/how/handoff.png"
+            body="A stranger claims it at asking, or lobs a lowball with a polite note. You say yes. Their cupboard gets a new character, your shelf gets a little air. Everybody pours."
           />
         </div>
       </section>
@@ -341,17 +313,30 @@ function HowCard({
   num,
   title,
   body,
+  image,
 }: {
   num: string;
   title: string;
   body: string;
+  image: string;
 }) {
   return (
-    <div className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--card)] p-5 sm:p-6">
-      <div className="mono text-sm text-[color:var(--muted)]">{num}</div>
-      <div className="mt-2 text-xl font-black">{title}</div>
-      <div className="mt-2 text-sm text-[color:var(--muted)] leading-relaxed">
-        {body}
+    <div className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--card)] p-5 sm:p-6 flex gap-4">
+      <div className="relative w-20 h-20 shrink-0 rounded-xl overflow-hidden bg-[color:var(--background)] border border-[color:var(--border)]">
+        <Image
+          src={image}
+          alt=""
+          fill
+          sizes="80px"
+          className="object-contain"
+        />
+      </div>
+      <div className="min-w-0">
+        <div className="mono text-sm text-[color:var(--muted)]">{num}</div>
+        <div className="mt-1 text-xl font-black">{title}</div>
+        <div className="mt-2 text-sm text-[color:var(--muted)] leading-relaxed">
+          {body}
+        </div>
       </div>
     </div>
   );

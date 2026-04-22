@@ -88,8 +88,8 @@ class User(Base):
 class Item(Base):
     """A drinkware listing on Gulp.
 
-    Humor columns (`shame_index`, `years_in_cupboard`, `confession`,
-    `acquisition_source`) exist so the UI can roast the seller lovingly.
+    Humor columns (`shame_index`, `years_in_cupboard`, `acquisition_source`)
+    exist so the UI can roast the seller lovingly.
     """
 
     __tablename__ = "items"
@@ -126,10 +126,10 @@ class Item(Base):
     material: Mapped[str] = mapped_column(String(40), default="ceramic")
     colorway: Mapped[str] = mapped_column(String(80), default="")
     condition: Mapped[str] = mapped_column(String(80), default="Used — lightly sipped")
-    confession: Mapped[str] = mapped_column(Text, default="")
     shame_index: Mapped[int] = mapped_column(Integer, default=5)
     years_in_cupboard: Mapped[int] = mapped_column(Integer, default=1)
     image_emoji: Mapped[str] = mapped_column(String(16), default="☕️")
+    image_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     price: Mapped[Decimal] = mapped_column(Numeric(10, 2))
     original_price: Mapped[Optional[Decimal]] = mapped_column(
         Numeric(10, 2), nullable=True

@@ -9,6 +9,7 @@ Endpoints:
     POST /items            - create a listing (auto-provisions a seller)
     POST /offers           - claim (omit price) or make a lower offer
     GET  /offers           - recent offers feed (for the ticker)
+    POST /uploads/image    - upload a listing photo, returns a public URL
 """
 from __future__ import annotations
 
@@ -16,12 +17,13 @@ from contextlib import asynccontextmanager
 from decimal import Decimal
 from typing import AsyncIterator, Optional
 
-from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, File, HTTPException, Query, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import case, func, or_, select
+from fastapi.staticfiles import StaticFiles
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, joinedload
 
-from . import models, schemas
+from . import models, schemas, uploads
 from .config import settings
 from .db import get_db
 
@@ -74,12 +76,6 @@ def stats(db: Session = Depends(get_db)) -> schemas.Stats:
                 "cupboard_years"
             ),
             func.coalesce(func.avg(models.Item.shame_index), 0).label("avg_shame"),
-            func.coalesce(
-                func.sum(
-                    case((models.Item.confession != "", 1), else_=0)
-                ),
-                0,
-            ).label("confessions"),
             func.coalesce(func.sum(models.Item.price), 0).label("value_liberated"),
             select(func.count(models.Offer.id)).scalar_subquery().label(
                 "total_offers"
@@ -91,7 +87,6 @@ def stats(db: Session = Depends(get_db)) -> schemas.Stats:
         total_items=int(row.total_items),
         cupboard_years_liberated=int(row.cupboard_years),
         average_shame=round(float(row.avg_shame), 1),
-        confessions_on_file=int(row.confessions),
         total_offers=int(row.total_offers),
         value_liberated_usd=round(float(row.value_liberated), 2),
     )
@@ -100,7 +95,7 @@ def stats(db: Session = Depends(get_db)) -> schemas.Stats:
 @app.get("/items", response_model=schemas.ItemPage)
 def list_items(
     db: Session = Depends(get_db),
-    q: Optional[str] = Query(None, description="Search title/brand/colorway/confession"),
+    q: Optional[str] = Query(None, description="Search title/brand/colorway"),
     drinkware_type: Optional[str] = None,
     acquisition_source: Optional[str] = None,
     sort: str = Query(
@@ -113,7 +108,7 @@ def list_items(
     """Return a paged, filtered, sorted slice of drinkware listings.
 
     Args:
-        q: Free-text search across title, brand, colorway, and confession.
+        q: Free-text search across title, brand, and colorway.
         drinkware_type: Exact match on one of the drinkware enums.
         acquisition_source: Exact match on one of the acquisition enums.
         sort: Ordering key (`trending`, `price_asc`, `price_desc`,
@@ -129,7 +124,6 @@ def list_items(
                 models.Item.title.ilike(like),
                 models.Item.brand.ilike(like),
                 models.Item.colorway.ilike(like),
-                models.Item.confession.ilike(like),
             )
         )
     if drinkware_type:
@@ -303,3 +297,27 @@ def list_offers(
         .offset(offset)
     )
     return list(db.scalars(stmt))
+
+
+@app.post("/uploads/image", response_model=schemas.UploadOut)
+def upload_image(
+    request: Request, file: UploadFile = File(...)
+) -> schemas.UploadOut:
+    """Upload a listing photo.
+
+    Validates the file as an image, transcodes to WebP, caps the largest
+    dimension at 1600px, and returns an absolute URL the browser can use in
+    ``<img src>`` and Next.js ``<Image>``. The caller is expected to copy
+    that URL into the listing's ``image_url`` when creating the item.
+    """
+    filename = uploads.save_uploaded_image(file, settings.upload_dir_path)
+    base = str(request.base_url).rstrip("/")
+    return schemas.UploadOut(url=f"{base}/uploads/{filename}")
+
+
+# Mount static uploads LAST so specific routes above (e.g. POST /uploads/image)
+# take precedence. The directory is created on demand so a fresh checkout /
+# container image doesn't need to vendor the folder.
+_upload_dir = settings.upload_dir_path
+_upload_dir.mkdir(parents=True, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=str(_upload_dir)), name="uploads")

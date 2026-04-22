@@ -107,10 +107,10 @@ class ItemBase(BaseModel):
     material: str = "ceramic"
     colorway: str = ""
     condition: str = "Used — lightly sipped"
-    confession: str = ""
     shame_index: int = Field(default=5, ge=1, le=10)
     years_in_cupboard: int = Field(default=1, ge=0, le=60)
     image_emoji: str = "☕️"
+    image_url: Optional[str] = Field(default=None, max_length=500)
     price: Money = Field(..., ge=Decimal("0"))
     original_price: Optional[Money] = None
     is_sold: bool = False
@@ -183,6 +183,15 @@ class Stats(BaseModel):
     total_items: int
     cupboard_years_liberated: int
     average_shame: float
-    confessions_on_file: int
     total_offers: int
     value_liberated_usd: float
+
+
+class UploadOut(BaseModel):
+    """Absolute URL pointing at the persisted upload.
+
+    Callers copy ``url`` into the listing's ``image_url`` when creating the
+    item.
+    """
+
+    url: str

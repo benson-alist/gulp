@@ -45,7 +45,7 @@ export default function ClaimPanel({
           Rehomed
         </div>
         <div className="mt-1 font-bold">
-          This cup found a new cupboard. Onward.
+          This cup found a new cupboard. Cheers to the match.
         </div>
       </div>
     );
@@ -96,12 +96,12 @@ export default function ClaimPanel({
       setStatus("done");
       if (result.kind === "claim") {
         setFeedback(
-          `Claimed for ${formatUSD(result.price)}. Their shelf breathes. Yours just got heavier. See you on the sell page.`,
+          `Claimed for ${formatUSD(result.price)}. Welcome home, cup. The seller thanks you.`,
         );
         router.refresh();
       } else {
         setFeedback(
-          `Offer of ${formatUSD(result.price)} sent — awaiting the seller's blessing. Start clearing cupboard space, just in case.`,
+          `Offer of ${formatUSD(result.price)} dispatched — awaiting the seller's blessing. Fingers, cups, everything crossed.`,
         );
       }
     } catch (e) {
@@ -173,7 +173,7 @@ export default function ClaimPanel({
               className="px-4 py-2.5 rounded-lg border border-[color:var(--border)] outline-none focus:border-[color:var(--foreground)] text-sm"
             />
             <span className="mono text-[10px] text-[color:var(--muted)]">
-              Asking {formatUSD(price)}. Lowball politely.
+              Asking {formatUSD(price)}. Lowball with dignity.
             </span>
           </label>
         )}
@@ -187,8 +187,8 @@ export default function ClaimPanel({
             onChange={(e) => setMessage(e.target.value)}
             placeholder={
               mode === "claim"
-                ? "Can pick up Tuesday. Have room — well, I will soon."
-                : "My cupboard is a museum. One more won't hurt. It will."
+                ? "Can pick up Tuesday. Got a shelf with its name on it."
+                : "Love this one — here's what I can do. Hope it works."
             }
             rows={2}
             className="px-4 py-2.5 rounded-lg border border-[color:var(--border)] outline-none focus:border-[color:var(--foreground)] text-sm resize-none"

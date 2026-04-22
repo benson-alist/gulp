@@ -54,10 +54,10 @@ export type Item = {
   material: string;
   colorway: string;
   condition: string;
-  confession: string;
   shame_index: number;
   years_in_cupboard: number;
   image_emoji: string;
+  image_url: string | null;
   price: number;
   original_price: number | null;
   is_sold: boolean;
@@ -69,7 +69,6 @@ export type Stats = {
   total_items: number;
   cupboard_years_liberated: number;
   average_shame: number;
-  confessions_on_file: number;
   total_offers: number;
   value_liberated_usd: number;
 };
@@ -165,10 +164,10 @@ export const api = {
     material: string;
     colorway: string;
     condition: string;
-    confession?: string;
     shame_index: number;
     years_in_cupboard: number;
     image_emoji?: string;
+    image_url?: string | null;
     price: number;
     original_price?: number | null;
     seller_username: string;
@@ -196,6 +195,24 @@ export const api = {
       method: "POST",
       body: JSON.stringify(payload),
     }),
+  /**
+   * Upload a listing photo. Returns an absolute URL the caller can store in
+   * `image_url`. Uses multipart/form-data directly (not `req`) because the
+   * browser must set the boundary itself.
+   */
+  uploadImage: async (file: File): Promise<{ url: string }> => {
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch(`${API_BASE}/uploads/image`, {
+      method: "POST",
+      body: fd,
+    });
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      throw new Error(`Upload failed (${res.status}): ${body}`);
+    }
+    return (await res.json()) as { url: string };
+  },
 };
 
 /** Format a USD amount; no fractional cents unless `cents` is true. */

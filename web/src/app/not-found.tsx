@@ -9,8 +9,8 @@ export default function NotFound() {
       </div>
       <h1 className="mt-4 text-3xl font-black">This cup is missing from its saucer.</h1>
       <p className="mt-2 text-[color:var(--muted)]">
-        It may have already left for someone else&apos;s cupboard. It will
-        be back. They always come back.
+        It may have already left for its next cupboard. Plenty more where
+        that came from — the shelves are full of good ones.
       </p>
       <Link
         href="/browse"

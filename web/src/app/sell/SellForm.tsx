@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
   AcquisitionSource,
@@ -64,16 +65,48 @@ export default function SellForm() {
     material: "ceramic",
     colorway: "",
     condition: "Used — lightly sipped",
-    confession: "",
     shame_index: 5,
     years_in_cupboard: 2,
     image_emoji: "☕️",
+    image_url: null as string | null,
     price: 10,
     original_price: 0,
     seller_username: "",
   });
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [error, setError] = useState("");
+  const [photoStatus, setPhotoStatus] = useState<"idle" | "uploading" | "error">(
+    "idle",
+  );
+  const [photoError, setPhotoError] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  /** Push the picked file to the API and cache the returned URL on the form. */
+  async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhotoStatus("uploading");
+    setPhotoError("");
+    try {
+      const { url } = await api.uploadImage(file);
+      update("image_url", url);
+      setPhotoStatus("idle");
+    } catch (err) {
+      setPhotoStatus("error");
+      setPhotoError(
+        err instanceof Error ? err.message : "Couldn't upload that photo.",
+      );
+    } finally {
+      // Reset so re-picking the same file still fires a change event.
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
+  function clearPhoto() {
+    update("image_url", null);
+    setPhotoStatus("idle");
+    setPhotoError("");
+  }
 
   /** Patch a single field on the in-progress listing draft. */
   function update<K extends keyof typeof form>(
@@ -115,7 +148,7 @@ export default function SellForm() {
         />
       </Field>
 
-      <Field label="Brand">
+      <Field label="Brand (or whatever it says on the bottom)">
         <input
           required
           value={form.brand}
@@ -187,7 +220,7 @@ export default function SellForm() {
           value={form.colorway}
           onChange={(e) => update("colorway", e.target.value)}
           className={inputCls}
-          placeholder="Rose Quartz / Ivory / 'Sticker-peeled chic'"
+          placeholder="Rose Quartz / Ivory / 'Post-sticker chic'"
         />
       </Field>
 
@@ -207,7 +240,74 @@ export default function SellForm() {
         </select>
       </Field>
 
-      <Field label="Choose a vibe">
+      <Field label="Photo">
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="sr-only"
+          onChange={handlePhotoChange}
+        />
+        {form.image_url ? (
+          <div className="flex items-start gap-3">
+            <div className="relative w-28 h-28 rounded-xl overflow-hidden border border-[color:var(--border)] bg-[color:var(--card)] shrink-0">
+              <Image
+                src={form.image_url}
+                alt="Listing photo"
+                fill
+                sizes="112px"
+                className="object-cover"
+                unoptimized
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="text-sm px-3 py-1.5 rounded-full border border-[color:var(--border)] hover:bg-[color:var(--card)] min-h-[36px]"
+              >
+                Replace
+              </button>
+              <button
+                type="button"
+                onClick={clearPhoto}
+                className="text-sm px-3 py-1.5 rounded-full border border-[color:var(--border)] text-[color:var(--muted)] hover:text-[color:var(--danger)] min-h-[36px]"
+              >
+                Remove
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={photoStatus === "uploading"}
+            className="min-h-[96px] w-full flex flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-[color:var(--border)] text-sm text-[color:var(--muted)] hover:border-[color:var(--foreground)] hover:text-[color:var(--foreground)] transition disabled:opacity-60"
+          >
+            <span className="text-2xl leading-none" aria-hidden>
+              📸
+            </span>
+            <span>
+              {photoStatus === "uploading"
+                ? "Uploading…"
+                : "Tap to add a photo"}
+            </span>
+            <span className="mono text-[10px] uppercase tracking-wider">
+              JPG / PNG / WebP · up to 8 MB
+            </span>
+          </button>
+        )}
+        {photoError && (
+          <div
+            role="alert"
+            className="mt-2 text-[color:var(--danger)] text-xs mono"
+          >
+            {photoError}
+          </div>
+        )}
+      </Field>
+
+      <Field label="Or a vibe emoji (used when there's no photo)">
         <div className="flex flex-wrap gap-2">
           {EMOJIS.map((e) => (
             <button
@@ -229,29 +329,20 @@ export default function SellForm() {
 
       <div className="grid grid-cols-2 gap-3">
         <Slider
-          label="Years in cupboard"
+          label="Years on the shelf"
           min={0}
           max={30}
           value={form.years_in_cupboard}
           onChange={(v) => update("years_in_cupboard", v)}
         />
         <Slider
-          label="Shame index"
+          label="Character score"
           min={1}
           max={10}
           value={form.shame_index}
           onChange={(v) => update("shame_index", v)}
         />
       </div>
-
-      <Field label="Confession (optional)">
-        <textarea
-          value={form.confession}
-          onChange={(e) => update("confession", e.target.value)}
-          className={`${inputCls} min-h-[96px]`}
-          placeholder="Why did you buy this? What phase were you in?"
-        />
-      </Field>
 
       <div className="grid grid-cols-2 gap-3">
         <Field label="Asking price ($)">
@@ -275,7 +366,7 @@ export default function SellForm() {
               update("original_price", Number(e.target.value))
             }
             className={inputCls}
-            placeholder="Let the app roast you"
+            placeholder="Optional — unlocks the old-price strikethrough"
           />
         </Field>
       </div>
@@ -286,7 +377,7 @@ export default function SellForm() {
           value={form.seller_username}
           onChange={(e) => update("seller_username", e.target.value)}
           className={inputCls}
-          placeholder="e.g. shelf_saver"
+          placeholder="e.g. shelf_saver, mug_liberator, etc."
         />
       </Field>
 
@@ -301,7 +392,7 @@ export default function SellForm() {
         disabled={status === "loading"}
         className="min-h-[48px] bg-[color:var(--foreground)] text-[color:var(--background)] px-6 py-3 rounded-full font-black hover:bg-[color:var(--accent)] hover:text-[color:var(--accent-ink)] transition disabled:opacity-60"
       >
-        {status === "loading" ? "Listing…" : "Rehome this cup"}
+        {status === "loading" ? "Rehoming…" : "Release this cup into the wild"}
       </button>
     </form>
   );

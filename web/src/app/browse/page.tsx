@@ -92,9 +92,9 @@ export default async function BrowsePage({
           </h1>
           <div className="mt-1 text-sm text-[color:var(--muted)]">
             Showing {items.length === 0 ? 0 : page.offset + 1}–
-            {page.offset + items.length} of {page.total} · confessed, priced,
-            still dishwasher safe · any one of these could be your next
-            confession
+            {page.offset + items.length} of {page.total} · priced, rehomable,
+            mostly dishwasher safe · one of these could be your new
+            favourite cup
           </div>
         </div>
       </div>
@@ -150,9 +150,9 @@ export default async function BrowsePage({
           <div className="text-5xl" aria-hidden>
             🫗
           </div>
-          <div className="mt-3 font-bold">Nothing matched.</div>
+          <div className="mt-3 font-bold">Nothing matched those filters.</div>
           <div className="text-sm text-[color:var(--muted)]">
-            Loosen the grip on your filters — or your cupboard.
+            Try loosening a chip or two.
           </div>
         </div>
       ) : (
@@ -178,7 +178,7 @@ export default async function BrowsePage({
                   })}
                   className="px-4 py-2 rounded-full border border-[color:var(--border)] text-sm hover:border-[color:var(--foreground)]"
                 >
-                  ← Earlier regrets
+                  ← Earlier listings
                 </Link>
               ) : (
                 <span />
@@ -194,7 +194,7 @@ export default async function BrowsePage({
                   })}
                   className="px-4 py-2 rounded-full bg-[color:var(--foreground)] text-[color:var(--background)] text-sm font-semibold"
                 >
-                  More shelf sentences →
+                  Deeper into the cupboard →
                 </Link>
               ) : (
                 <span />

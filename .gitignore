@@ -48,6 +48,9 @@ out/
 tmp/
 *.log
 
+# User-uploaded listing photos (dev-only filesystem store)
+api/uploads/
+
 # Coverage
 coverage/
 htmlcov/
