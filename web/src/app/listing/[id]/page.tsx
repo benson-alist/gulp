@@ -11,7 +11,7 @@ import {
 import ShameMeter from "@/components/ShameMeter";
 import ClaimPanel from "./ClaimPanel";
 import { formatCalendarDateUTC } from "@/lib/formatDate";
-import { StickerBadge, TapeStrip } from "@/components/illo";
+import { RehomedStamp, StickerBadge, TapeStrip } from "@/components/illo";
 
 export const dynamic = "force-dynamic";
 
@@ -80,11 +80,7 @@ export default async function ListingPage({
             <span className="absolute top-4 right-4 z-10">
               <StickerBadge tone="sky">{item.years_in_cupboard}y on shelf</StickerBadge>
             </span>
-            {item.is_sold && (
-              <div className="absolute inset-0 flex items-center justify-center bg-[color:var(--foreground)]/80 text-[color:var(--background)] mono uppercase tracking-widest text-lg sm:text-xl rounded-2xl">
-                Rehomed
-              </div>
-            )}
+            {item.is_sold && <RehomedStamp size="lg" />}
           </div>
 
           <div className="rounded-2xl border-2 border-[color:var(--border)] bg-[color:var(--card)] p-5 shadow-sticker">

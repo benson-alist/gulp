@@ -8,7 +8,7 @@ import {
   formatUSD,
 } from "@/lib/api";
 import ShameMeter from "./ShameMeter";
-import { StickerBadge, TapeStrip } from "@/components/illo";
+import { RehomedStamp, StickerBadge, TapeStrip } from "@/components/illo";
 
 /**
  * Listing card with sticker badges, tape-strip price, and peel hover.
@@ -48,11 +48,7 @@ export default function ItemCard({ item }: { item: Item }) {
             <StickerBadge tone="mustard">-{pct}%</StickerBadge>
           </span>
         )}
-        {item.is_sold && (
-          <div className="absolute inset-0 flex items-center justify-center bg-[color:var(--foreground)]/85 text-[color:var(--background)] mono uppercase tracking-widest text-sm z-20">
-            Rehomed
-          </div>
-        )}
+        {item.is_sold && <RehomedStamp size="sm" />}
       </div>
       <div className="p-3 sm:p-4 flex flex-col gap-2 flex-1">
         <div className="flex items-center gap-1.5 text-[11px] mono uppercase text-[color:var(--muted)]">

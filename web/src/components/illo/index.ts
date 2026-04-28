@@ -2,6 +2,7 @@ export { default as DividerScribble } from "./DividerScribble";
 export { default as DividerWavy } from "./DividerWavy";
 export { default as Halftone } from "./Halftone";
 export { default as MascotPeek } from "./MascotPeek";
+export { default as RehomedStamp } from "./RehomedStamp";
 export { default as ScribbleArrow } from "./ScribbleArrow";
 export { default as ScribbleCircle } from "./ScribbleCircle";
 export { default as ScribbleUnderline } from "./ScribbleUnderline";
