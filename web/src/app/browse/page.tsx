@@ -8,6 +8,7 @@ import {
 } from "@/lib/api";
 import ItemCard from "@/components/ItemCard";
 import BrowseControls from "./BrowseControls";
+import EmptyState from "@/components/EmptyState";
 
 export const dynamic = "force-dynamic";
 
@@ -84,12 +85,8 @@ export default async function BrowsePage({
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
       <div className="flex items-end justify-between gap-4 flex-wrap">
         <div>
-          <div className="mono text-[11px] uppercase tracking-[0.2em] text-[color:var(--muted)]">
-            The whole cupboard
-          </div>
-          <h1 className="mt-1 text-3xl sm:text-4xl font-black tracking-tight">
-            Browse all drinkware
-          </h1>
+          <div className="t-eyebrow">The whole cupboard</div>
+          <h1 className="mt-1 t-display">Browse all drinkware</h1>
           <div className="mt-1 text-sm text-[color:var(--muted)]">
             Showing {items.length === 0 ? 0 : page.offset + 1}–
             {page.offset + items.length} of {page.total} · priced, rehomable,
@@ -146,20 +143,27 @@ export default async function BrowsePage({
       />
 
       {items.length === 0 ? (
-        <div className="mt-10 border border-dashed border-[color:var(--border)] rounded-2xl p-10 text-center">
-          <div className="text-5xl" aria-hidden>
-            🫗
-          </div>
-          <div className="mt-3 font-bold">Nothing matched those filters.</div>
-          <div className="text-sm text-[color:var(--muted)]">
-            Try loosening a chip or two.
-          </div>
+        <div className="mt-10">
+          <EmptyState
+            title="Nothing matched those filters."
+            body="Try loosening a chip or two."
+            ctaHref="/browse"
+            ctaLabel="Reset filters"
+            mascotSrc="/hero.png"
+            mascotAlt="Friendly drinkware mascot"
+          />
         </div>
       ) : (
         <>
           <div className="mt-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
             {items.map((l) => (
-              <ItemCard key={l.id} item={l} />
+              <div
+                key={l.id}
+                className="h-full"
+                style={{ transform: `rotate(${((l.id % 5) - 2) * 0.55}deg)` }}
+              >
+                <ItemCard item={l} />
+              </div>
             ))}
           </div>
 
@@ -245,12 +249,12 @@ function Chip({
   return (
     <Link
       href={href}
-      className={`shrink-0 rounded-full border ${
+      className={`shrink-0 rounded-full border-2 shadow-sticker sticker-peel font-semibold ${
         small ? "px-3 py-1 text-xs" : "px-3.5 py-1.5 text-sm"
-      } transition ${
+      } ${
         active
-          ? "bg-[color:var(--foreground)] text-[color:var(--background)] border-[color:var(--foreground)]"
-          : "border-[color:var(--border)] hover:border-[color:var(--foreground)]"
+          ? "bg-[color:var(--foreground)] text-[color:var(--background)] border-[color:var(--foreground)] -rotate-1"
+          : "border-[color:var(--border)] bg-[color:var(--card)] hover:border-[color:var(--foreground)]"
       }`}
     >
       {children}

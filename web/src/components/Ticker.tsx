@@ -21,11 +21,21 @@ export default async function Ticker() {
         `${l.image_emoji} NEW · ${l.brand} ${l.title.split("—")[0].trim()} · ${formatUSD(l.price)}`,
     );
 
-    const offerEntries = offers.map((o) =>
-      o.kind === "claim"
-        ? `🎉 CLAIMED · @${o.buyer_username} liberated a shelf for ${formatUSD(o.price)}`
-        : `💬 OFFER · @${o.buyer_username} lowballed politely at ${formatUSD(o.price)}`,
-    );
+    const offerEntries = offers.map((o) => {
+      if (o.kind === "claim") {
+        return `🎉 CLAIMED · @${o.buyer.username} liberated a shelf for ${formatUSD(o.price)}`;
+      }
+      if (o.kind === "flip") {
+        if (o.status === "flipped_won") {
+          return `🪙 FLIP WIN · @${o.buyer.username} walked away paying ${formatUSD(o.price)}`;
+        }
+        if (o.status === "flipped_lost") {
+          return `🪙 FLIP LOSS · @${o.buyer.username} owes ${formatUSD(o.price)} and their dignity`;
+        }
+        return `🪙 FLIP · @${o.buyer.username} dared a seller to flip a coin`;
+      }
+      return `💬 OFFER · @${o.buyer.username} lowballed politely at ${formatUSD(o.price)}`;
+    });
 
     const roasts = [
       "🫠 You have 14 mugs. You own 2 hands.",

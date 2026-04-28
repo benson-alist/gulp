@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
@@ -10,6 +10,8 @@ import {
   SOURCE_LABELS,
   api,
 } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
+import Field from "@/components/Field";
 
 const DRINKWARE_TYPES: DrinkwareType[] = [
   "mug",
@@ -48,14 +50,23 @@ const EMOJIS = [
 ];
 
 /**
- * Mobile-friendly listing form (v2 — single price).
+ * Mobile-friendly listing form (v3 — authed seller).
  *
  * One asking `price` field with an optional "what you paid" anchor that
- * the rest of the app uses for the strikethrough roast. No bid/ask/last
- * sale, no authentication queue.
+ * the rest of the app uses for the strikethrough roast. The seller is
+ * always the currently signed-in user — the form no longer asks for a
+ * handle, and bounces unauthenticated visitors to the login page.
  */
 export default function SellForm() {
   const router = useRouter();
+  const { user, status } = useAuth();
+
+  useEffect(() => {
+    if (status === "anon") {
+      router.replace("/login?next=/sell");
+    }
+  }, [status, router]);
+
   const [form, setForm] = useState({
     title: "",
     brand: "",
@@ -71,9 +82,10 @@ export default function SellForm() {
     image_url: null as string | null,
     price: 10,
     original_price: 0,
-    seller_username: "",
   });
-  const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
+  const [submitStatus, setSubmitStatus] = useState<"idle" | "loading" | "error">(
+    "idle",
+  );
   const [error, setError] = useState("");
   const [photoStatus, setPhotoStatus] = useState<"idle" | "uploading" | "error">(
     "idle",
@@ -119,7 +131,7 @@ export default function SellForm() {
   /** Submit to the API and jump to the newly created listing on success. */
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    setStatus("loading");
+    setSubmitStatus("loading");
     setError("");
     try {
       const created = await api.createItem({
@@ -128,15 +140,23 @@ export default function SellForm() {
       });
       router.push(`/listing/${created.id}`);
     } catch (err) {
-      setStatus("error");
+      setSubmitStatus("error");
       setError(err instanceof Error ? err.message : "Something slipped.");
     }
+  }
+
+  if (status !== "authed") {
+    return (
+      <div className="text-[color:var(--muted)] mono text-sm">
+        Checking your cupboard credentials…
+      </div>
+    );
   }
 
   return (
     <form
       onSubmit={submit}
-      className="grid gap-4 rounded-2xl border border-[color:var(--border)] bg-[color:var(--card)] p-5 sm:p-6"
+      className="grid gap-4 rounded-2xl border-2 border-[color:var(--foreground)] bg-[color:var(--card)] p-5 sm:p-6 shadow-sticker -rotate-[0.3deg]"
     >
       <Field label="Title">
         <input
@@ -371,53 +391,51 @@ export default function SellForm() {
         </Field>
       </div>
 
-      <Field label="Your handle">
-        <input
-          required
-          value={form.seller_username}
-          onChange={(e) => update("seller_username", e.target.value)}
-          className={inputCls}
-          placeholder="e.g. shelf_saver, mug_liberator, etc."
-        />
-      </Field>
+      {user && (
+        <div className="rounded-xl border border-dashed border-[color:var(--border)] bg-[color:var(--card)]/60 p-3 mono text-[11px] uppercase tracking-wider text-[color:var(--muted)]">
+          Listing as{" "}
+          <span className="text-[color:var(--foreground)]">
+            {user.display_name}
+          </span>{" "}
+          · @{user.username}
+        </div>
+      )}
 
       {error && (
-        <div role="alert" className="text-[color:var(--danger)] text-sm mono">
-          {error}
+        <div
+          role="alert"
+          className="flex gap-3 items-center rounded-xl border-2 border-[color:var(--danger)] bg-[color:var(--background)]/80 p-3"
+        >
+          <div className="relative w-14 h-14 shrink-0 hidden sm:block">
+            <Image
+              src="/hero.png"
+              alt=""
+              width={56}
+              height={56}
+              className="object-contain opacity-90"
+            />
+          </div>
+          <div className="text-[color:var(--danger)] text-sm mono font-semibold">
+            {error}
+          </div>
         </div>
       )}
 
       <button
         type="submit"
-        disabled={status === "loading"}
+        disabled={submitStatus === "loading"}
         className="min-h-[48px] bg-[color:var(--foreground)] text-[color:var(--background)] px-6 py-3 rounded-full font-black hover:bg-[color:var(--accent)] hover:text-[color:var(--accent-ink)] transition disabled:opacity-60"
       >
-        {status === "loading" ? "Rehoming…" : "Release this cup into the wild"}
+        {submitStatus === "loading"
+          ? "Rehoming…"
+          : "Release this cup into the wild"}
       </button>
     </form>
   );
 }
 
 const inputCls =
-  "w-full px-4 py-2.5 rounded-lg border border-[color:var(--border)] outline-none focus:border-[color:var(--foreground)] bg-[color:var(--card)] text-sm";
-
-/** Labeled form field with a mono eyebrow caption. */
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <label className="grid gap-1">
-      <span className="mono text-[10px] uppercase text-[color:var(--muted)]">
-        {label}
-      </span>
-      {children}
-    </label>
-  );
-}
+  "w-full px-4 py-2.5 rounded-lg border-2 border-[color:var(--border)] outline-none focus:border-[color:var(--foreground)] bg-[color:var(--card)] text-sm";
 
 /** Range input with live value readout; thumb sized for mobile. */
 function Slider({

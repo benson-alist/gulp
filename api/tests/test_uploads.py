@@ -13,6 +13,7 @@ from fastapi.testclient import TestClient
 from PIL import Image
 
 from app.config import settings
+from tests.conftest import login_as
 
 
 @pytest.fixture(autouse=True)
@@ -29,6 +30,7 @@ def _png_bytes(color: tuple[int, int, int] = (255, 0, 0)) -> bytes:
 
 
 def test_upload_image_returns_absolute_url(client: TestClient):
+    login_as(client, "seed_seller")
     res = client.post(
         "/uploads/image",
         files={"file": ("mug.png", _png_bytes(), "image/png")},
@@ -43,6 +45,7 @@ def test_upload_image_returns_absolute_url(client: TestClient):
 
 
 def test_upload_image_can_be_used_on_a_listing(client: TestClient, make_item):
+    login_as(client, "seed_seller")
     res = client.post(
         "/uploads/image",
         files={"file": ("mug.png", _png_bytes(), "image/png")},
@@ -53,6 +56,7 @@ def test_upload_image_can_be_used_on_a_listing(client: TestClient, make_item):
 
 
 def test_upload_image_rejects_non_image_content_type(client: TestClient):
+    login_as(client, "seed_seller")
     res = client.post(
         "/uploads/image",
         files={"file": ("notes.txt", b"not a picture", "text/plain")},
@@ -61,6 +65,7 @@ def test_upload_image_rejects_non_image_content_type(client: TestClient):
 
 
 def test_upload_image_rejects_garbage_bytes(client: TestClient):
+    login_as(client, "seed_seller")
     res = client.post(
         "/uploads/image",
         files={"file": ("fake.png", b"definitely not png", "image/png")},
@@ -69,6 +74,7 @@ def test_upload_image_rejects_garbage_bytes(client: TestClient):
 
 
 def test_upload_image_rejects_empty_file(client: TestClient):
+    login_as(client, "seed_seller")
     res = client.post(
         "/uploads/image",
         files={"file": ("empty.png", b"", "image/png")},

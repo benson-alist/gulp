@@ -3,28 +3,41 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth } from "@/lib/auth";
 
 /**
  * Sticky bottom tab bar shown on viewports below `md`.
  *
  * Collapses into the header-based navigation at `md` and up so it never
  * competes with the desktop links. Every target is ≥44px tall for
- * touch-friendliness.
+ * touch-friendliness. The rightmost tab adapts to auth state — it deep
+ * links into the dashboard when the user is signed in and into login
+ * otherwise.
  */
 export default function MobileTabBar() {
   const pathname = usePathname();
+  const { user, status } = useAuth();
+
+  const youTab =
+    status === "loading"
+      ? { href: "/login", label: "You", icon: "/nav/home.png" }
+      : user
+        ? { href: "/dashboard", label: "You", icon: "/nav/home.png" }
+        : { href: "/login", label: "Log in", icon: "/nav/home.png" };
+
   const tabs: { href: string; label: string; icon: string }[] = [
     { href: "/", label: "Home", icon: "/nav/home.png" },
     { href: "/browse", label: "Browse", icon: "/nav/browse.png" },
     { href: "/sell", label: "Sell", icon: "/nav/sell.png" },
+    youTab,
   ];
 
   return (
     <nav
       aria-label="Primary"
-      className="fixed bottom-0 inset-x-0 z-40 md:hidden border-t border-[color:var(--border)] bg-[color:var(--background)]/95 backdrop-blur"
+      className="fixed bottom-0 inset-x-0 z-40 md:hidden border-t-2 border-[color:var(--foreground)] bg-[color:var(--background)]/95 backdrop-blur"
     >
-      <ul className="grid grid-cols-3">
+      <ul className="grid grid-cols-4">
         {tabs.map((t) => {
           const active =
             t.href === "/" ? pathname === "/" : pathname.startsWith(t.href);

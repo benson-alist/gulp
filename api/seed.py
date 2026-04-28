@@ -1,18 +1,24 @@
 """Seed Gulp with a glorious gallery of drinkware regret.
 
-Idempotent: if any items already exist, the script exits without changes.
-Run with: ``python seed.py`` from inside the activated API virtualenv.
+On first run it creates sellers + listings. If users already exist but
+lack real credentials (e.g. you ran an older seed before the auth
+migration), it backfills ``email`` + ``password_hash`` so those accounts
+become usable — and rewrites any placeholder ``@gulp.local`` emails the
+migration inserted to the real dev domain below. Run with:
+``python seed.py`` from inside the activated API virtualenv.
 
-Schema is v2 — each listing has a single asking `price` and, where it
-sharpens the roast, an `original_price` ("what the seller paid").
+Schema is v3 — each listing has a single asking `price` and, where it
+sharpens the roast, an `original_price` ("what the seller paid"); users
+now log in with email + password, and offers are owned by real accounts.
 """
 from __future__ import annotations
 
 import logging
 from decimal import Decimal
 
-from app import models
+from app import auth, models
 from app.db import SessionLocal
+from app.flip_buyer_view_reset import clear_resolved_flip_buyer_views
 
 
 logger = logging.getLogger("gulp.seed")
@@ -23,6 +29,17 @@ def _dec(value) -> Decimal:
     return Decimal(str(value)).quantize(Decimal("0.01"))
 
 
+# A single shared dev password keeps local exploration frictionless. Never
+# reuse this in any environment that isn't explicitly a scratch DB.
+DEV_PASSWORD = "gulp1234"
+
+# The email-validator library rejects reserved TLDs like `.local` and
+# `.test`, so we use a real-looking (and syntactically valid) domain for
+# seed emails. It's never sent to; it's just the login identifier.
+DEV_EMAIL_DOMAIN = "gulp.market"
+
+# (username, display_name, verified). Email is derived as
+# ``{username}@{DEV_EMAIL_DOMAIN}``; password is the shared dev password above.
 SELLERS: list[tuple[str, str, bool]] = [
     ("dad_of_four", "Dad of Four (ranked 14th)", True),
     ("trendy_tessa", "Trendy Tessa", True),
@@ -35,6 +52,11 @@ SELLERS: list[tuple[str, str, bool]] = [
     ("wine_mom_wendy", "Wine Mom Wendy", True),
     ("ceramics_major", "Ceramics Major", False),
 ]
+
+# The three accounts highlighted in docs + the login page. Pick names that
+# also happen to have listings in the seed corpus so demos are immediately
+# interesting.
+DEMO_USERNAMES = {"dad_of_four", "trendy_tessa", "brewery_bill"}
 
 
 # (title, brand, drinkware_type, acquisition_source, size_oz, material,
@@ -270,28 +292,162 @@ LISTINGS: list[tuple] = [
 ]
 
 
-def run() -> None:
-    """Insert seed data if the items table is empty.
+def _print_demo_banner() -> None:
+    """Print login credentials for the three demo accounts.
 
-    Relies on Alembic having already migrated the schema — we no longer call
-    `create_all` here, because a missing migration should be noisy, not
-    silently patched up.
+    Meant for humans running seed locally — pulls the highlighted trio out
+    of ``DEMO_USERNAMES`` and renders a small terminal table.
+    """
+    print("\n" + "=" * 60)
+    print("  Gulp demo accounts (all share password: {})".format(DEV_PASSWORD))
+    print("=" * 60)
+    for username, display_name, _verified in SELLERS:
+        if username in DEMO_USERNAMES:
+            print(f"  {display_name:<32}  {username}@{DEV_EMAIL_DOMAIN}")
+    print("=" * 60 + "\n")
+
+
+def _backfill_passwords(db) -> int:
+    """Bring pre-auth user rows up to the v3 shape.
+
+    Two things can be stale after an upgrade:
+
+    1. ``password_hash`` is the placeholder ``'pending-reseed'`` inserted by
+       the auth migration — replace it with a real bcrypt hash.
+    2. ``email`` was written as ``{username}@gulp.local`` by the migration;
+       ``.local`` is a reserved TLD that ``email-validator`` rejects on
+       login, so rewrite it to the real dev domain.
+
+    Returns the number of users touched. Idempotent — re-running never
+    invalidates working credentials or emails.
+    """
+    touched = 0
+    pending = (
+        db.query(models.User)
+        .filter(models.User.password_hash == "pending-reseed")
+        .all()
+    )
+    hashed = auth.hash_password(DEV_PASSWORD) if pending else None
+    for user in pending:
+        user.password_hash = hashed
+        touched += 1
+
+    stale_emails = (
+        db.query(models.User)
+        .filter(models.User.email.like("%@gulp.local"))
+        .all()
+    )
+    for user in stale_emails:
+        user.email = f"{user.username}@{DEV_EMAIL_DOMAIN}"
+        touched += 1
+
+    if touched:
+        db.commit()
+    return touched
+
+
+def _dev_reset_flip_buyer_views(db) -> None:
+    """Clear flip reveal stamps so **My bids** shows unseen settled flips again.
+
+    Runs at the end of every ``seed.py`` invocation (idempotent). Safe on dev
+    DBs only; do not rely on this in production workflows.
+    """
+    n = clear_resolved_flip_buyer_views(db)
+    db.commit()
+    if n:
+        logger.info(
+            "Seed: cleared buyer view stamp on %d resolved flip offer(s).",
+            n,
+        )
+
+
+def _seed_demo_flip(
+    db, users: list[models.User], items: list[models.Item]
+) -> None:
+    """Insert one pending coin-flip offer so the feature is demo-able on boot.
+
+    Picks the first listing owned by ``dad_of_four`` (a seller highlighted on
+    the docs/login screen) and posts a flip on it from ``trendy_tessa``. The
+    flip straddles the asking price so the validator is happy and the seller
+    sees an actionable row in their dashboard on first login.
+
+    No-ops silently if either account or a usable listing is missing, so
+    curated-seed customizations don't break startup.
+    """
+    by_username = {u.username: u for u in users}
+    seller = by_username.get("dad_of_four")
+    buyer = by_username.get("trendy_tessa")
+    if seller is None or buyer is None:
+        return
+
+    demo_item = next(
+        (i for i in items if i.seller_id == seller.id and not i.is_sold),
+        None,
+    )
+    if demo_item is None:
+        return
+
+    asking = Decimal(demo_item.price)
+    low = (asking * Decimal("0.5")).quantize(Decimal("0.01"))
+    high = (asking * Decimal("1.5")).quantize(Decimal("0.01"))
+    if not (low < asking < high):
+        return
+
+    db.add(
+        models.Offer(
+            item_id=demo_item.id,
+            buyer_id=buyer.id,
+            price=((low + high) / Decimal(2)).quantize(Decimal("0.01")),
+            kind="flip",
+            status="awaiting_seller",
+            message="Feeling lucky — flip for it?",
+            low_price=low,
+            high_price=high,
+        )
+    )
+
+
+def run() -> None:
+    """Insert seed data if the items table is empty, then ensure accounts work.
+
+    Relies on Alembic having already migrated the schema — we no longer
+    call ``create_all`` here, because a missing migration should be noisy,
+    not silently patched up.
+
+    After either a full insert or the \"already seeded\" path, clears
+    ``viewed_by_buyer_at`` on all resolved flips so local **My bids** reveal
+    UX stays easy to re-test.
     """
     db = SessionLocal()
     try:
         if db.query(models.Item).count() > 0:
-            logger.info("Seed: items already exist; skipping.")
+            backfilled = _backfill_passwords(db)
+            if backfilled:
+                logger.info(
+                    "Seed: items already exist; fixed %d stale auth row(s).",
+                    backfilled,
+                )
+            else:
+                logger.info("Seed: items already exist; skipping.")
+            _print_demo_banner()
+            _dev_reset_flip_buyer_views(db)
             return
 
+        hashed = auth.hash_password(DEV_PASSWORD)
         users: list[models.User] = []
         for username, display_name, verified in SELLERS:
             user = models.User(
-                username=username, display_name=display_name, verified=verified
+                email=f"{username}@{DEV_EMAIL_DOMAIN}",
+                username=username,
+                display_name=display_name,
+                password_hash=hashed,
+                verified=verified,
             )
             db.add(user)
             users.append(user)
         db.flush()
 
+        items: list[models.Item] = []
         for row in LISTINGS:
             (
                 title, brand, drinkware_type, acquisition_source, size_oz,
@@ -299,30 +455,34 @@ def run() -> None:
                 years_in_cupboard, image_emoji, price, original_price,
                 seller_idx, image_url,
             ) = row
-            db.add(
-                models.Item(
-                    title=title,
-                    brand=brand,
-                    drinkware_type=drinkware_type,
-                    acquisition_source=acquisition_source,
-                    size_oz=_dec(size_oz),
-                    material=material,
-                    colorway=colorway,
-                    condition=condition,
-                    shame_index=shame_index,
-                    years_in_cupboard=years_in_cupboard,
-                    image_emoji=image_emoji,
-                    image_url=image_url,
-                    price=_dec(price),
-                    original_price=_dec(original_price) if original_price is not None else None,
-                    seller_id=users[seller_idx].id,
-                )
+            item = models.Item(
+                title=title,
+                brand=brand,
+                drinkware_type=drinkware_type,
+                acquisition_source=acquisition_source,
+                size_oz=_dec(size_oz),
+                material=material,
+                colorway=colorway,
+                condition=condition,
+                shame_index=shame_index,
+                years_in_cupboard=years_in_cupboard,
+                image_emoji=image_emoji,
+                image_url=image_url,
+                price=_dec(price),
+                original_price=_dec(original_price) if original_price is not None else None,
+                seller_id=users[seller_idx].id,
             )
+            db.add(item)
+            items.append(item)
 
+        db.flush()
+        _seed_demo_flip(db, users, items)
         db.commit()
         logger.info(
             "Seed: inserted %d sellers and %d items.", len(users), len(LISTINGS)
         )
+        _print_demo_banner()
+        _dev_reset_flip_buyer_views(db)
     finally:
         db.close()
 
