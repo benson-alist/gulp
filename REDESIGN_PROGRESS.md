@@ -39,5 +39,6 @@ Until added, the UI falls back to existing `/hero.png` and SVG primitives.
 | Hydration: `suppressHydrationWarning` on `<html>` + stable date formatting | ✅ | Theme script sets `data-theme` before hydrate; `formatDate.ts` for client UI |
 | Display type: Fraunces (hero) | ✅ | Replaced Bagel Fat One — readable soft serif, `.t-hero` tuned (700, looser line-height) |
 | `RehomedStamp` overlay (illo) | ✅ | Flea-market slap-on sticker (terracotta + cream, hard 2px border, sticker shadow, off-axis), italic Fraunces "Rehomed" + scribble underline + corner tape; matches site idiom |
+| Layout clipping fixes | ✅ | Header drops `overflow-hidden` (UserMenu dropdown was clipped); chip rows on home + browse get `py-2 -my-1` so sticker shadow + rotation aren't clipped by `overflow-x-auto`; cupboard circulation index uses `rounded-2xl` instead of `.torn-paper` (clip-path was hiding the box-shadow and cropping bottom captions) |
 
 **Overall: 97%** (remaining: optional new PNG assets + polish pass on edit listing if desired)

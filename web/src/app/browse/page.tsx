@@ -96,7 +96,10 @@ export default async function BrowsePage({
         </div>
       </div>
 
-      <div className="mt-5 flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap">
+      {/* `py-2 -my-1` reserves vertical room inside the horizontal scroll
+          container so chips' sticker-shadow and slight rotation aren't clipped
+          on mobile (overflow-x:auto becomes a 2D scroll container). */}
+      <div className="mt-5 -my-1 py-2 flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap">
         <Chip
           href={buildHref(params, { drinkware_type: undefined })}
           active={!params.drinkware_type}
@@ -117,7 +120,7 @@ export default async function BrowsePage({
         ))}
       </div>
 
-      <div className="mt-3 flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap">
+      <div className="mt-3 -my-1 py-2 flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap">
         <Chip
           href={buildHref(params, { acquisition_source: undefined })}
           active={!params.acquisition_source}

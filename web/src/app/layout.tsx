@@ -73,7 +73,9 @@ export default function RootLayout({
           }}
         />
         <AuthProvider>
-          <header className="sticky top-0 z-30 border-b-2 border-[color:var(--foreground)] bg-[color:var(--background)]/92 backdrop-blur relative overflow-hidden">
+          {/* No `overflow-hidden` here — would clip the UserMenu dropdown.
+              Halftone is `inset-0` so it's already bounded by the header box. */}
+          <header className="sticky top-0 z-30 border-b-2 border-[color:var(--foreground)] bg-[color:var(--background)]/92 backdrop-blur relative">
             <Halftone className="opacity-30" />
             <div className="relative max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
               <Link href="/" className="flex items-center gap-2 min-w-0">

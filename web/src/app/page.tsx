@@ -112,8 +112,11 @@ export default async function Home() {
               </div>
             </div>
 
-            <div className="mt-10 md:mt-12 torn-paper border-2 border-[color:var(--foreground)] bg-[color:var(--card)] p-5 sm:p-7 shadow-sticker relative">
-              <div className="flex items-center justify-between mono text-[10px] uppercase tracking-widest">
+            {/* Card uses the standard rounded + sticker-shadow idiom rather than
+                .torn-paper, because clip-path was hiding the box-shadow and
+                cropping the bottom row of small captions on narrow viewports. */}
+            <div className="mt-10 md:mt-12 rounded-2xl border-2 border-[color:var(--foreground)] bg-[color:var(--card)] p-5 sm:p-7 shadow-sticker relative">
+              <div className="flex items-center justify-between gap-3 mono text-[10px] uppercase tracking-widest">
                 <span className="text-[color:var(--muted)]">Cupboard circulation index</span>
                 <StickerBadge tone="plum">Live</StickerBadge>
               </div>
@@ -193,7 +196,7 @@ export default async function Home() {
 
       <section className="max-w-6xl mx-auto px-4 sm:px-6 pb-10">
         <SectionHeader eyebrow="Shop by how it got there" title="Every cup has a backstory." />
-        <div className="mt-5 flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap">
+        <div className="mt-5 -my-1 py-2 flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap">
           {sources.map((s) => (
             <Link
               key={s}
