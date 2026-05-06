@@ -136,6 +136,31 @@ body {
   animation: wobble-tap 180ms ease-out 1;
 }
 
+/** Quick stamp / thud shake on the claim panel after a successful take-home. */
+@keyframes claim-stamp-shake {
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  15% {
+    transform: translate(-3px, 2px) rotate(-0.6deg);
+  }
+  30% {
+    transform: translate(3px, -2px) rotate(0.5deg);
+  }
+  45% {
+    transform: translate(-2px, 1px) rotate(-0.3deg);
+  }
+  60% {
+    transform: translate(2px, -1px) rotate(0.2deg);
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .claim-stamp-shake {
+    animation: claim-stamp-shake 0.55s ease-out;
+  }
+}
+
 @keyframes scribble-reveal {
   to {
     stroke-dashoffset: 0;
@@ -183,7 +208,38 @@ body {
   );
 }
 
+@keyframes runaway-mug {
+  0% {
+    left: -12%;
+    transform: translateY(0) rotate(0deg);
+  }
+  100% {
+    left: 112%;
+    transform: translateY(-6vh) rotate(22deg);
+  }
+}
+.runaway-mug-track {
+  animation: runaway-mug 11s linear forwards;
+}
+
+@keyframes hero-sparkle-fade {
+  to {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.35);
+  }
+}
+.hero-sparkle-bit {
+  animation: hero-sparkle-fade 0.55s ease-out forwards;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .runaway-mug-track {
+    animation: none;
+  }
+  .hero-sparkle-bit {
+    animation: none;
+    opacity: 0;
+  }
   .bob {
     animation: none;
   }
@@ -209,6 +265,9 @@ body {
 
 .ticker-track {
   animation: ticker 55s linear infinite;
+}
+.ticker-track--paused {
+  animation-play-state: paused;
 }
 
 @keyframes ticker {

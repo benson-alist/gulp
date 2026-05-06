@@ -1,25 +1,25 @@
 import { Suspense } from "react";
-import Image from "next/image";
 import LoginForm from "./LoginForm";
+import IntegratedMascot from "@/components/IntegratedMascot";
 
 export const metadata = {
   title: "Log in to Gulp",
 };
 
-/** Login page — split hero + tilted form card. */
+/**
+ * Login page — mascot + tilted form share the same integrated frame as the home hero;
+ * mascot shows on all breakpoints above the form on narrow viewports.
+ */
 export default function LoginPage() {
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10 md:py-14">
-      <div className="grid md:grid-cols-[1fr_1.1fr] gap-10 md:gap-12 items-start">
-        <div className="relative hidden md:block">
-          <div className="bob relative max-w-sm mx-auto">
-            <Image
-              src="/hero.png"
-              alt="Friendly drinkware characters on a shelf"
-              width={480}
-              height={480}
-              className="w-full h-auto drop-shadow-[8px_10px_0_var(--foreground)]"
+      <div className="grid gap-10 md:grid-cols-[1fr_1.1fr] md:gap-12 items-start">
+        <div className="relative flex justify-center md:justify-start">
+          <div className="bob">
+            <IntegratedMascot
+              variant="auth"
               priority
+              alt="Friendly drinkware characters on a shelf"
             />
           </div>
         </div>

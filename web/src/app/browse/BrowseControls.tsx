@@ -8,7 +8,7 @@ const SORT_OPTIONS: { value: SortKey; label: string }[] = [
   { value: "trending", label: "Trending" },
   { value: "newest", label: "Newest" },
   { value: "longest_shelf", label: "Longest shelf" },
-  { value: "shame_desc", label: "Most character" },
+  { value: "shame_desc", label: "Honesty ↑" },
   { value: "price_asc", label: "Price ↑" },
   { value: "price_desc", label: "Price ↓" },
 ];
@@ -77,7 +77,9 @@ export default function BrowseControls({
         {SORT_OPTIONS.map((o) => (
           <button
             key={o.value}
-            onClick={() => push({ sort: o.value })}
+            onClick={() => {
+              push({ sort: o.value });
+            }}
             className={`shrink-0 px-3 py-1.5 rounded-full border text-xs transition ${
               defaultSort === o.value
                 ? "bg-[color:var(--foreground)] text-[color:var(--background)] border-[color:var(--foreground)]"

@@ -49,6 +49,23 @@ export default function Dashboard() {
   useEffect(() => {
     setTab(toTab(searchParams.get("tab")));
   }, [searchParams]);
+
+  /**
+   * Keep the active tab in the URL (`?tab=`) so deep links, refresh, and
+   * browser back/forward stay in sync with the local tab state.
+   */
+  function selectTab(next: Tab) {
+    setTab(next);
+    const params = new URLSearchParams(searchParams.toString());
+    if (next === "listings") {
+      params.delete("tab");
+    } else {
+      params.set("tab", next);
+    }
+    const qs = params.toString();
+    router.replace(qs ? `/dashboard?${qs}` : "/dashboard", { scroll: false });
+  }
+
   const [items, setItems] = useState<Item[] | null>(null);
   const [bids, setBids] = useState<OfferWithItem[] | null>(null);
   const [error, setError] = useState("");
@@ -108,15 +125,21 @@ export default function Dashboard() {
       </div>
 
       <div className="mt-8 flex flex-wrap items-center gap-2 border-b-2 border-[color:var(--border)] pb-0">
-        <TabButton active={tab === "listings"} onClick={() => setTab("listings")}>
+        <TabButton
+          active={tab === "listings"}
+          onClick={() => selectTab("listings")}
+        >
           My listings
           <Pill>{safeItems.length}</Pill>
         </TabButton>
-        <TabButton active={tab === "bids"} onClick={() => setTab("bids")}>
+        <TabButton active={tab === "bids"} onClick={() => selectTab("bids")}>
           My bids
           <Pill>{safeBids.length}</Pill>
         </TabButton>
-        <TabButton active={tab === "settings"} onClick={() => setTab("settings")}>
+        <TabButton
+          active={tab === "settings"}
+          onClick={() => selectTab("settings")}
+        >
           Settings
         </TabButton>
         <div className="ml-auto pb-2 w-full sm:w-auto flex justify-end">

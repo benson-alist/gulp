@@ -12,6 +12,10 @@ import {
 } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import Field from "@/components/Field";
+import IntegratedMascot from "@/components/IntegratedMascot";
+import Confetti from "@/components/Confetti";
+import CelebrationToast from "@/components/CelebrationToast";
+import { roastAfterList } from "@/lib/celebrationRoasts";
 
 const DRINKWARE_TYPES: DrinkwareType[] = [
   "mug",
@@ -92,6 +96,9 @@ export default function SellForm() {
   );
   const [photoError, setPhotoError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  /** Brief confetti + toast before navigating to the new listing. */
+  const [listCelebration, setListCelebration] = useState(false);
+  const [listToast, setListToast] = useState<string | null>(null);
 
   /** Push the picked file to the API and cache the returned URL on the form. */
   async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -138,6 +145,9 @@ export default function SellForm() {
         ...form,
         original_price: form.original_price > 0 ? form.original_price : null,
       });
+      setListCelebration(true);
+      setListToast(roastAfterList(created.id));
+      await new Promise((r) => window.setTimeout(r, 1200));
       router.push(`/listing/${created.id}`);
     } catch (err) {
       setSubmitStatus("error");
@@ -154,10 +164,18 @@ export default function SellForm() {
   }
 
   return (
-    <form
-      onSubmit={submit}
-      className="grid gap-4 rounded-2xl border-2 border-[color:var(--foreground)] bg-[color:var(--card)] p-5 sm:p-6 shadow-sticker -rotate-[0.3deg]"
-    >
+    <>
+      {listCelebration ? <Confetti zClass="z-[60]" /> : null}
+      {listToast ? (
+        <CelebrationToast
+          message={listToast}
+          onDismiss={() => setListToast(null)}
+        />
+      ) : null}
+      <form
+        onSubmit={submit}
+        className="grid gap-4 rounded-2xl border-2 border-[color:var(--foreground)] bg-[color:var(--card)] p-5 sm:p-6 shadow-sticker -rotate-[0.3deg]"
+      >
       <Field label="Title">
         <input
           required
@@ -356,7 +374,7 @@ export default function SellForm() {
           onChange={(v) => update("years_in_cupboard", v)}
         />
         <Slider
-          label="Character score"
+          label="Honesty index"
           min={1}
           max={10}
           value={form.shame_index}
@@ -406,14 +424,8 @@ export default function SellForm() {
           role="alert"
           className="flex gap-3 items-center rounded-xl border-2 border-[color:var(--danger)] bg-[color:var(--background)]/80 p-3"
         >
-          <div className="relative w-14 h-14 shrink-0 hidden sm:block">
-            <Image
-              src="/hero.png"
-              alt=""
-              width={56}
-              height={56}
-              className="object-contain opacity-90"
-            />
+          <div className="shrink-0 opacity-95">
+            <IntegratedMascot variant="inline" alt="" src="/hero.png" />
           </div>
           <div className="text-[color:var(--danger)] text-sm mono font-semibold">
             {error}
@@ -431,6 +443,7 @@ export default function SellForm() {
           : "Release this cup into the wild"}
       </button>
     </form>
+    </>
   );
 }
 

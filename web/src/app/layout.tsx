@@ -9,6 +9,8 @@ import HeaderNav from "@/components/HeaderNav";
 import Script from "next/script";
 import { AuthProvider } from "@/lib/auth";
 import { Halftone, MascotPeek } from "@/components/illo";
+import IdleTitle from "@/components/IdleTitle";
+import LiveToastsLoader from "@/components/LiveToastsLoader";
 
 /** Display headlines: Fraunces — warm serif, much more readable than bubble display fonts. */
 const display = Fraunces({
@@ -73,6 +75,8 @@ export default function RootLayout({
           }}
         />
         <AuthProvider>
+          <IdleTitle />
+          <LiveToastsLoader />
           {/* No `overflow-hidden` here — would clip the UserMenu dropdown.
               Halftone is `inset-0` so it's already bounded by the header box. */}
           <header className="sticky top-0 z-30 border-b-2 border-[color:var(--foreground)] bg-[color:var(--background)]/92 backdrop-blur relative">
@@ -104,43 +108,53 @@ export default function RootLayout({
             <Ticker />
           </header>
           <main className="flex-1">{children}</main>
-          <footer className="border-t-2 border-[color:var(--foreground)] mt-20 relative overflow-hidden bg-[color:var(--card)]/40">
+          {/*
+            Footer top rule = “shelf edge”. Mascot sits slightly above the content
+            block (negative margin) so it rests on that line; ``overflow-visible``
+            keeps the tile from clipping. Same integrated frame as home/auth.
+          */}
+          <footer className="border-t-2 border-[color:var(--foreground)] mt-20 relative overflow-visible bg-[color:var(--card)]/40">
             <Halftone className="opacity-20" />
-            <div className="relative max-w-6xl mx-auto px-4 sm:px-6 py-8 text-sm text-[color:var(--muted)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <Image
-                  src="/logo-mark.png"
-                  alt=""
-                  width={40}
-                  height={40}
-                  className="w-10 h-10"
-                />
-                <div>
+            <div className="relative max-w-6xl mx-auto px-4 sm:px-6 pt-5 pb-8 sm:pt-6 sm:pb-8 text-sm text-[color:var(--muted)]">
+              <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+                <div className="flex items-center gap-3">
                   <Image
-                    src="/wordmark.png"
-                    alt="Gulp"
-                    width={70}
+                    src="/logo-mark.png"
+                    alt=""
+                    width={40}
                     height={40}
-                    className="h-7 w-auto"
+                    className="w-10 h-10"
                   />
-                  <div className="mono text-xs mt-0.5">
-                    The marketplace for one too many.
+                  <div>
+                    <Image
+                      src="/wordmark.png"
+                      alt="Gulp"
+                      width={70}
+                      height={40}
+                      className="h-7 w-auto"
+                    />
+                    <div className="mono text-xs mt-0.5">
+                      The marketplace for one too many.
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-end gap-4">
-                <MascotPeek
-                  src="/hero.png"
-                  alt=""
-                  width={100}
-                  height={100}
-                  edge="right"
-                  className="hidden sm:block shrink-0 opacity-90"
-                />
-                <div className="mono text-[11px] uppercase tracking-wider text-right sm:max-w-xs">
-                  A parody marketplace. Please hydrate responsibly.
-                  <br />
-                  Every cup deserves a cupboard that wants it.
+                <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-end sm:gap-6">
+                  <div className="relative z-[1] -mt-10 flex shrink-0 justify-center sm:-mt-14 sm:justify-end">
+                    <MascotPeek
+                      src="/hero.png"
+                      alt=""
+                      edge="right"
+                      integrated
+                      footerCompact
+                      reactToScroll
+                      className="shrink-0"
+                    />
+                  </div>
+                  <div className="mono text-[11px] uppercase tracking-wider text-center sm:max-w-xs sm:text-right">
+                    A parody marketplace. Please hydrate responsibly.
+                    <br />
+                    Every cup deserves a cupboard that wants it.
+                  </div>
                 </div>
               </div>
             </div>

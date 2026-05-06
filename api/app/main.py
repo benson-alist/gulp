@@ -2,6 +2,7 @@
 
 Endpoints:
     GET    /health                - liveness + slogan
+    GET    /events                - SSE activity stream (claims, offers, flips, new listings)
     GET    /stats                 - summary stats for the home hero
     POST   /auth/register         - create an account, set auth cookie
     POST   /auth/login            - verify credentials, set auth cookie
@@ -26,6 +27,7 @@ Endpoints:
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 import secrets
@@ -47,12 +49,14 @@ from fastapi import (
 )
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
+from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import delete, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
 from . import auth, models, schemas, uploads
+from .events import hub as activity_hub
 from .config import settings
 from .db import SessionLocal, get_db
 from .flip_buyer_view_reset import clear_resolved_flip_buyer_views
@@ -73,7 +77,11 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     When ``settings.reset_flip_buyer_views_on_boot`` is enabled (local dev),
     resolved coin-flip rows have ``viewed_by_buyer_at`` cleared once at
     startup so **My bids** always shows the unseen-reveal state for testing.
+
+    The activity hub attaches to the running loop so sync route handlers can
+    publish SSE events via :func:`activity_hub.publish`.
     """
+    activity_hub.attach_loop(asyncio.get_running_loop())
     if settings.reset_flip_buyer_views_on_boot and not os.environ.get(
         "GULP_RUNNING_TESTS"
     ):
@@ -287,6 +295,40 @@ app.openapi = custom_openapi
 def health():
     """Liveness probe with tongue firmly in cheek."""
     return {"status": "ok", "service": "gulp-api", "slogan": "One too many."}
+
+
+@app.get(
+    "/events",
+    tags=["Meta"],
+    summary="Server-Sent Events stream of marketplace activity",
+)
+async def activity_events() -> StreamingResponse:
+    """Public SSE channel: JSON payloads when claims, offers, flips, or new
+    listings occur. Comment lines keep proxies from closing idle connections.
+    """
+
+    async def event_gen() -> AsyncIterator[bytes]:
+        queue = activity_hub.subscribe()
+        try:
+            yield b": keepalive\n\n"
+            while True:
+                try:
+                    payload = await asyncio.wait_for(queue.get(), timeout=15.0)
+                    yield f"data: {payload}\n\n".encode("utf-8")
+                except asyncio.TimeoutError:
+                    yield b": keepalive\n\n"
+        finally:
+            activity_hub.unsubscribe(queue)
+
+    return StreamingResponse(
+        event_gen(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @app.get(
@@ -744,6 +786,15 @@ def create_item(
     db.add(item)
     db.commit()
     db.refresh(item)
+    try:
+        activity_hub.publish(
+            {
+                "kind": "new_listing",
+                "text": f"☕ NEW · {item.brand} {item.title.split('—')[0].strip()[:48]}",
+            }
+        )
+    except Exception:
+        pass
     return item
 
 
@@ -1005,6 +1056,35 @@ def create_offer(
     db.refresh(offer)
     # Eager-load buyer so the response_model serialization sees it.
     db.refresh(offer, attribute_names=["buyer"])
+    try:
+        buyer_name = (
+            offer.buyer.username
+            if offer.buyer is not None
+            else current_user.username
+        )
+        if kind == "claim":
+            activity_hub.publish(
+                {
+                    "kind": "claim",
+                    "text": f"🎉 @{buyer_name} rehomed a cup",
+                }
+            )
+        elif kind == "offer":
+            activity_hub.publish(
+                {
+                    "kind": "offer",
+                    "text": f"💬 @{buyer_name} lobbed an offer",
+                }
+            )
+        else:
+            activity_hub.publish(
+                {
+                    "kind": "flip",
+                    "text": f"🪙 @{buyer_name} proposed a coin flip",
+                }
+            )
+    except Exception:
+        pass
     return offer
 
 
@@ -1139,6 +1219,17 @@ def resolve_flip(
     db.commit()
     db.refresh(offer)
     db.refresh(offer, attribute_names=["buyer"])
+    try:
+        buyer_name = offer.buyer.username if offer.buyer is not None else "buyer"
+        outcome = "won" if buyer_won else "lost"
+        activity_hub.publish(
+            {
+                "kind": "flip_resolved",
+                "text": f"🪙 @{buyer_name} {outcome} the flip — cup rehomed",
+            }
+        )
+    except Exception:
+        pass
     return offer
 
 

@@ -7,6 +7,7 @@ import {
   api,
 } from "@/lib/api";
 import ItemCard from "@/components/ItemCard";
+import BrowseChipLink from "@/components/BrowseChipLink";
 import BrowseControls from "./BrowseControls";
 import EmptyState from "@/components/EmptyState";
 
@@ -100,14 +101,14 @@ export default async function BrowsePage({
           container so chips' sticker-shadow and slight rotation aren't clipped
           on mobile (overflow-x:auto becomes a 2D scroll container). */}
       <div className="mt-5 -my-1 py-2 flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap">
-        <Chip
+        <BrowseChipLink
           href={buildHref(params, { drinkware_type: undefined })}
           active={!params.drinkware_type}
         >
           All
-        </Chip>
+        </BrowseChipLink>
         {DRINKWARE_ORDER.map((t) => (
-          <Chip
+          <BrowseChipLink
             key={t}
             href={buildHref(params, { drinkware_type: t })}
             active={params.drinkware_type === t}
@@ -116,27 +117,27 @@ export default async function BrowsePage({
             <span className="ml-1 mono text-[10px] opacity-60">
               {typeCounts[t] ?? 0}
             </span>
-          </Chip>
+          </BrowseChipLink>
         ))}
       </div>
 
       <div className="mt-3 -my-1 py-2 flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap">
-        <Chip
+        <BrowseChipLink
           href={buildHref(params, { acquisition_source: undefined })}
           active={!params.acquisition_source}
           small
         >
           Any origin
-        </Chip>
+        </BrowseChipLink>
         {SOURCE_ORDER.map((s) => (
-          <Chip
+          <BrowseChipLink
             key={s}
             href={buildHref(params, { acquisition_source: s })}
             active={params.acquisition_source === s}
             small
           >
             {SOURCE_LABELS[s]}
-          </Chip>
+          </BrowseChipLink>
         ))}
       </div>
 
@@ -237,30 +238,3 @@ function buildHref(
   return `/browse${qs ? `?${qs}` : ""}`;
 }
 
-/** Rounded filter chip used in both chip rows. */
-function Chip({
-  href,
-  active,
-  small,
-  children,
-}: {
-  href: string;
-  active?: boolean;
-  small?: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <Link
-      href={href}
-      className={`shrink-0 rounded-full border-2 shadow-sticker sticker-peel font-semibold ${
-        small ? "px-3 py-1 text-xs" : "px-3.5 py-1.5 text-sm"
-      } ${
-        active
-          ? "bg-[color:var(--foreground)] text-[color:var(--background)] border-[color:var(--foreground)] -rotate-1"
-          : "border-[color:var(--border)] bg-[color:var(--card)] hover:border-[color:var(--foreground)]"
-      }`}
-    >
-      {children}
-    </Link>
-  );
-}

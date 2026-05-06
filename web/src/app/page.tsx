@@ -19,6 +19,10 @@ import {
   SparkleBurst,
   StickerBadge,
 } from "@/components/illo";
+import HeroCursorTrail from "@/components/HeroCursorTrail";
+import IntegratedMascot from "@/components/IntegratedMascot";
+import { HERO_MASCOT_PUBLIC_SRC } from "@/lib/heroMascotSrc";
+import RunawayMug from "@/components/RunawayMug";
 
 export const dynamic = "force-dynamic";
 
@@ -56,12 +60,13 @@ export default async function Home() {
 
   return (
     <div>
+      <RunawayMug />
       <ParallaxVars>
         <section className="relative overflow-hidden">
           <div className="grain absolute inset-0 opacity-35 pointer-events-none" />
           <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-10 md:pt-16 pb-4 md:pb-6 relative">
             <div className="grid md:grid-cols-[1.05fr_1fr] gap-8 md:gap-10 items-center">
-              <div className="relative z-10 parallax-stick">
+              <HeroCursorTrail className="z-10 parallax-stick">
                 <div className="t-eyebrow">Gulp · a circular economy for drinkware</div>
                 <h1 className="mt-3 t-hero">
                   The marketplace
@@ -93,20 +98,23 @@ export default async function Home() {
                   >
                     Rehome yours
                   </Link>
+                  <Link
+                    href="/quiz"
+                    className="inline-flex min-h-[48px] items-center px-5 py-3 rounded-full text-sm font-semibold text-[color:var(--muted)] hover:text-[color:var(--foreground)] underline decoration-dotted underline-offset-4"
+                  >
+                    Which vessel are you?
+                  </Link>
                 </div>
-              </div>
+              </HeroCursorTrail>
 
               <div className="relative flex justify-center md:justify-end">
-                <div className="absolute -top-4 -left-4 w-64 h-64 rounded-full bg-[color:var(--accent)]/25 blur-3xl hidden md:block parallax-stick" />
-                <div className="relative max-w-[min(100%,420px)] bob">
-                  <Image
-                    src="/hero.png"
-                    alt="A group of cute mismatched drinkware characters huddled together on a shelf"
-                    width={1024}
-                    height={1024}
+                <div className="absolute -top-4 -left-4 w-48 h-48 rounded-full bg-[color:var(--accent)]/25 blur-3xl hidden md:block parallax-stick" />
+                <div className="relative bob w-full flex justify-center md:justify-end md:w-auto">
+                  <IntegratedMascot
+                    variant="hero"
                     priority
-                    sizes="(min-width: 768px) 420px, 100vw"
-                    className="w-full h-auto select-none drop-shadow-[6px_8px_0_var(--foreground)]"
+                    src={HERO_MASCOT_PUBLIC_SRC}
+                    alt="A group of cute mismatched drinkware characters huddled together on a shelf"
                   />
                 </div>
               </div>
@@ -271,7 +279,7 @@ export default async function Home() {
             num="01"
             title="List it"
             image="/how/list.png"
-            body="Tell us what it is, how long it's been on your shelf, and what kind of character it has (1–10). Pick a vibe emoji. We won't ask for photos — a cup is a cup."
+            body="Tell us what it is, how long it's been on your shelf, and how upfront you're being about condition (honesty index 1–10). Pick a vibe emoji. We won't ask for photos — a cup is a cup."
           />
           <div className="hidden lg:flex items-center justify-center text-[color:var(--accent)] shrink-0 w-14">
             <ScribbleArrow className="w-12 h-8" />
@@ -289,7 +297,7 @@ export default async function Home() {
             num="03"
             title="Hand it off"
             image="/how/handoff.png"
-            body="A stranger claims it at asking, or lobs a lowball with a polite note. You say yes. Their cupboard gets a new character, your shelf gets a little air. Everybody pours."
+            body="A stranger claims it at asking, or lobs a lowball with a polite note. You say yes. Their cupboard gets a new resident, your shelf gets a little air. Everybody pours."
           />
         </div>
       </section>

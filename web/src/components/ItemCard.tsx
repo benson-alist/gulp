@@ -11,7 +11,7 @@ import ShameMeter from "./ShameMeter";
 import { RehomedStamp, StickerBadge, TapeStrip } from "@/components/illo";
 
 /**
- * Listing card with sticker badges, tape-strip price, and peel hover.
+ * Listing card with sticker badges, tape-strip price, and honesty index meter.
  */
 export default function ItemCard({ item }: { item: Item }) {
   const pct = discountPct(item.price, item.original_price);
@@ -59,6 +59,11 @@ export default function ItemCard({ item }: { item: Item }) {
         <div className="font-bold leading-tight line-clamp-2 text-sm sm:text-base font-sans">
           {item.title}
         </div>
+        {!item.is_sold && item.condition ? (
+          <p className="text-[11px] sm:text-xs text-[color:var(--muted)] line-clamp-2 leading-snug">
+            {item.condition}
+          </p>
+        ) : null}
         <div className="mt-auto flex items-end justify-between gap-3 pt-2">
           <div>
             <TapeStrip rotate={-3}>{formatUSD(item.price)}</TapeStrip>

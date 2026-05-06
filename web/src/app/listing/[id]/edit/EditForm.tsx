@@ -336,7 +336,7 @@ export default function EditForm({ item }: { item: Item }) {
           onChange={(v) => update("years_in_cupboard", v)}
         />
         <Slider
-          label="Character score"
+          label="Honesty index"
           min={1}
           max={10}
           value={form.shame_index}

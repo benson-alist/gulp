@@ -1,4 +1,5 @@
 import { api, formatUSD } from "@/lib/api";
+import TickerTrack from "@/components/TickerTrack";
 
 /**
  * Animated marquee — a live cupboard-liquidation feed.
@@ -80,19 +81,5 @@ export default async function Ticker() {
 
   const doubled = [...entries, ...entries];
 
-  return (
-    <div
-      aria-hidden
-      className="border-t border-[color:var(--border)] bg-[color:var(--foreground)] text-[color:var(--background)] overflow-hidden"
-    >
-      <div className="ticker-track flex gap-8 whitespace-nowrap py-1.5 mono text-[11px] uppercase tracking-wider">
-        {doubled.map((text, i) => (
-          <span key={i} className="flex items-center gap-2">
-            <span>{text}</span>
-            <span className="opacity-40">·</span>
-          </span>
-        ))}
-      </div>
-    </div>
-  );
+  return <TickerTrack items={doubled} />;
 }

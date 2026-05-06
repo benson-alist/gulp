@@ -1,10 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, ApiError, formatUSD } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import Confetti from "@/components/Confetti";
+import CelebrationToast from "@/components/CelebrationToast";
+import {
+  roastAfterClaim,
+  roastAfterFlipProposal,
+  roastAfterOffer,
+} from "@/lib/celebrationRoasts";
 
 type Status = "idle" | "loading" | "done" | "error";
 type Mode = "claim" | "offer" | "flip";
@@ -20,6 +27,8 @@ type Mode = "claim" | "offer" | "flip";
  * Buyer identity is taken from the signed-in user. Anonymous visitors
  * see a login CTA; sellers viewing their own listing see an edit link
  * instead of the buy panel (self-bidding is rejected server-side too).
+ *
+ * Successful **claim** feedback is visual only (confetti, toast, stamp shake) — no audio cues.
  */
 export default function ClaimPanel({
   itemId,
@@ -53,6 +62,18 @@ export default function ClaimPanel({
   const [message, setMessage] = useState("");
   const [status, setStatus] = useState<Status>("idle");
   const [feedback, setFeedback] = useState("");
+  /** Full-viewport confetti after a successful claim (not offer / flip). */
+  const [showConfetti, setShowConfetti] = useState(false);
+  /** Short fixed toast with a roast line; cleared by ``CelebrationToast`` timer. */
+  const [celebrationToast, setCelebrationToast] = useState<string | null>(null);
+  /** One-shot CSS class for a stamp thud shake on the panel chrome. */
+  const [stampShake, setStampShake] = useState(false);
+
+  useEffect(() => {
+    if (!showConfetti) return;
+    const t = window.setTimeout(() => setShowConfetti(false), 3200);
+    return () => window.clearTimeout(t);
+  }, [showConfetti]);
 
   if (sold) {
     return (
@@ -195,15 +216,21 @@ export default function ClaimPanel({
 
       setStatus("done");
       if (result.kind === "claim") {
+        setShowConfetti(true);
+        setCelebrationToast(roastAfterClaim(itemId));
+        setStampShake(true);
+        window.setTimeout(() => setStampShake(false), 600);
         setFeedback(
           `Claimed for ${formatUSD(result.price)}. Welcome home, cup. The seller thanks you.`,
         );
         router.refresh();
       } else if (result.kind === "flip") {
+        setCelebrationToast(roastAfterFlipProposal(itemId));
         setFeedback(
           `Flip on the table — ${formatUSD(flipLow)} vs ${formatUSD(flipHigh)}. The seller flips the coin. Good luck.`,
         );
       } else {
+        setCelebrationToast(roastAfterOffer(itemId));
         setFeedback(
           `Offer of ${formatUSD(result.price)} dispatched \u2014 awaiting the seller's blessing. Fingers, cups, everything crossed.`,
         );
@@ -221,7 +248,19 @@ export default function ClaimPanel({
   const expectedValue = (flipLow + flipHigh) / 2;
 
   return (
-    <div className="rounded-2xl border-2 border-[color:var(--foreground)] bg-[color:var(--card)] p-4 sm:p-5 shadow-sticker">
+    <>
+      {showConfetti ? <Confetti zClass="z-[60]" /> : null}
+      {celebrationToast ? (
+        <CelebrationToast
+          message={celebrationToast}
+          onDismiss={() => setCelebrationToast(null)}
+        />
+      ) : null}
+      <div
+        className={`rounded-2xl border-2 border-[color:var(--foreground)] bg-[color:var(--card)] p-4 sm:p-5 shadow-sticker ${
+          stampShake ? "claim-stamp-shake" : ""
+        }`}
+      >
       <div className="grid grid-cols-3 gap-2 mb-4">
         <TabBtn active={mode === "claim"} onClick={() => setMode("claim")}>
           Take it home
@@ -385,6 +424,7 @@ export default function ClaimPanel({
         </div>
       </div>
     </div>
+    </>
   );
 }
 

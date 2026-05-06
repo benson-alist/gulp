@@ -1,6 +1,6 @@
 import Link from "next/link";
-import Image from "next/image";
 import { ScribbleCircle } from "@/components/illo";
+import IntegratedMascot from "@/components/IntegratedMascot";
 
 type EmptyStateProps = {
   title: string;
@@ -13,7 +13,7 @@ type EmptyStateProps = {
 };
 
 /**
- * Centered empty state with optional mascot art and scribble frame.
+ * Centered empty state with optional mascot art (integrated frame) and scribble frame.
  */
 export default function EmptyState({
   title,
@@ -29,13 +29,11 @@ export default function EmptyState({
         <ScribbleCircle size={72} />
       </div>
       {mascotSrc ? (
-        <div className="relative w-24 h-24 mx-auto mb-3">
-          <Image
+        <div className="mx-auto mb-3 flex justify-center bob">
+          <IntegratedMascot
+            variant="empty"
             src={mascotSrc}
             alt={mascotAlt}
-            width={96}
-            height={96}
-            className="object-contain bob"
           />
         </div>
       ) : null}

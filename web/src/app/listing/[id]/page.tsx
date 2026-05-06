@@ -8,7 +8,8 @@ import {
   discountPct,
   formatUSD,
 } from "@/lib/api";
-import ShameMeter from "@/components/ShameMeter";
+import Auctioneer from "@/components/Auctioneer";
+import ShameMeterPlayful from "@/components/ShameMeterPlayful";
 import ClaimPanel from "./ClaimPanel";
 import { formatCalendarDateUTC } from "@/lib/formatDate";
 import { RehomedStamp, StickerBadge, TapeStrip } from "@/components/illo";
@@ -136,7 +137,7 @@ export default async function ListingPage({
             </div>
             <div className="text-right">
               <div className="mono text-[10px] uppercase text-[color:var(--muted)]">
-                Character
+                Honesty index
               </div>
               <div className="font-black">{item.shame_index}/10</div>
             </div>
@@ -149,9 +150,17 @@ export default async function ListingPage({
             {item.brand} · {item.colorway || item.material}
           </div>
           <h1 className="mt-2 t-display">{item.title}</h1>
+          <Auctioneer
+            title={item.title}
+            brand={item.brand}
+            drinkwareLabel={DRINKWARE_LABELS[item.drinkware_type]}
+            price={item.price}
+            yearsOnShelf={item.years_in_cupboard}
+          />
 
           <div className="mt-5 flex items-end flex-wrap gap-x-4 gap-y-2">
             <TapeStrip
+              peelable
               rotate={-2}
               className="!text-3xl sm:!text-4xl !px-4 !py-2 !font-black"
             >
@@ -179,7 +188,7 @@ export default async function ListingPage({
           </div>
 
           <div className="mt-5">
-            <ShameMeter value={item.shame_index} />
+            <ShameMeterPlayful value={item.shame_index} />
           </div>
 
           <div className="mt-6">
