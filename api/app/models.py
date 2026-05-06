@@ -56,8 +56,29 @@ ACQUISITION_SOURCES: tuple[str, ...] = (
 """How a piece of drinkware entered the seller's cupboard — fuel for the roast."""
 
 
-OFFER_KINDS: tuple[str, ...] = ("claim", "offer")
-OFFER_STATUSES: tuple[str, ...] = ("claimed", "awaiting_seller", "rejected", "withdrawn")
+OFFER_KINDS: tuple[str, ...] = ("claim", "offer", "flip")
+OFFER_STATUSES: tuple[str, ...] = (
+    "claimed",
+    "awaiting_seller",
+    "rejected",
+    "withdrawn",
+    "flipped_won",
+    "flipped_lost",
+)
+"""Offer lifecycle states.
+
+- ``claimed``: buyer took the item at asking price (terminal).
+- ``awaiting_seller``: offer or flip pending seller response.
+- ``rejected``: seller declined the pending offer/flip (terminal).
+- ``withdrawn``: buyer walked back their offer (reserved for future use).
+- ``flipped_won`` / ``flipped_lost``: flip resolved from the *buyer's*
+  perspective — ``flipped_won`` means the buyer pays ``low_price``,
+  ``flipped_lost`` means the buyer pays ``high_price`` (both terminal).
+"""
+
+
+FLIP_OUTCOMES: tuple[str, ...] = ("win", "lose")
+"""Possible outcomes of a coin flip, from the *buyer's* perspective."""
 
 
 def _in_list(column: str, values: tuple[str, ...]) -> str:
@@ -67,29 +88,35 @@ def _in_list(column: str, values: tuple[str, ...]) -> str:
 
 
 class User(Base):
-    """A seller or buyer handle.
+    """A Gulp account — one user, dual role (can both sell and bid).
 
-    Auth is out of scope for v1, so `username` is the primary identity.
+    ``email`` is used for login; ``username`` is the public handle rendered
+    on listings and offers. ``password_hash`` stores a bcrypt digest and is
+    never serialized (see ``schemas.UserOut`` / ``schemas.MeOut``).
     """
 
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
     username: Mapped[str] = mapped_column(String(64), unique=True, index=True)
     display_name: Mapped[str] = mapped_column(String(128))
+    password_hash: Mapped[str] = mapped_column(String(255))
     verified: Mapped[bool] = mapped_column(default=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
+    avatar_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
 
     items: Mapped[list["Item"]] = relationship(back_populates="seller")
+    offers: Mapped[list["Offer"]] = relationship(back_populates="buyer")
 
 
 class Item(Base):
     """A drinkware listing on Gulp.
 
-    Humor columns (`shame_index`, `years_in_cupboard`, `confession`,
-    `acquisition_source`) exist so the UI can roast the seller lovingly.
+    Humor columns (`shame_index`, `years_in_cupboard`, `acquisition_source`)
+    exist so the UI can roast the seller lovingly.
     """
 
     __tablename__ = "items"
@@ -126,10 +153,10 @@ class Item(Base):
     material: Mapped[str] = mapped_column(String(40), default="ceramic")
     colorway: Mapped[str] = mapped_column(String(80), default="")
     condition: Mapped[str] = mapped_column(String(80), default="Used — lightly sipped")
-    confession: Mapped[str] = mapped_column(Text, default="")
     shame_index: Mapped[int] = mapped_column(Integer, default=5)
     years_in_cupboard: Mapped[int] = mapped_column(Integer, default=1)
     image_emoji: Mapped[str] = mapped_column(String(16), default="☕️")
+    image_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     price: Mapped[Decimal] = mapped_column(Numeric(10, 2))
     original_price: Mapped[Optional[Decimal]] = mapped_column(
         Numeric(10, 2), nullable=True
@@ -147,13 +174,28 @@ class Item(Base):
 
 
 class Offer(Base):
-    """A claim (buy-now at asking price) or a negotiated offer on an `Item`.
+    """A claim, negotiated offer, or coin-flip proposal on an `Item`.
 
-    - `kind="claim"` means the buyer is taking it home at the asking price.
-    - `kind="offer"` means the buyer submitted a lower number for the seller
-      to consider.
+    Three flavours of buyer intent share this row:
 
-    The `ck_offers_one_claim_per_item` partial unique index (Postgres) is
+    - ``kind="claim"`` — the buyer is taking it home at the asking price.
+      ``status`` is set to ``claimed`` and the item is marked sold.
+    - ``kind="offer"`` — the buyer submitted a lower number for the seller
+      to consider. ``status`` starts at ``awaiting_seller``.
+    - ``kind="flip"`` — the buyer proposed flipping a coin between two
+      candidate prices. ``low_price`` is paid if the buyer wins, ``high_price``
+      if they lose. The server resolves the flip atomically on seller accept.
+      After resolution, ``viewed_by_buyer_at`` records when the buyer opened
+      the one-time reveal UI (``NULL`` until ``POST /offers/{id}/view``).
+
+    Flip-specific invariants (enforced by CHECK constraint):
+
+    - ``kind="flip"`` rows must have both ``low_price`` and ``high_price`` set
+      and ``0 <= low_price < high_price``.
+    - Non-flip rows must have ``low_price``, ``high_price``, and
+      ``flip_outcome`` all NULL — prevents accidental mixing in the UI.
+
+    The ``ck_offers_one_claim_per_item`` partial unique index (Postgres) is
     enforced via migration, not ORM, so tests on sqlite stay happy.
     """
 
@@ -166,18 +208,54 @@ class Offer(Base):
             _in_list("status", OFFER_STATUSES), name="ck_offers_status"
         ),
         CheckConstraint("price >= 0", name="ck_offers_price_nonneg"),
+        CheckConstraint(
+            "(flip_outcome IS NULL) OR (flip_outcome IN ('win', 'lose'))",
+            name="ck_offers_flip_outcome",
+        ),
+        CheckConstraint(
+            # Flip rows must carry both candidate prices, strictly ordered.
+            # Non-flip rows must have all three flip columns NULL so the
+            # table never accumulates half-populated flip leftovers.
+            "("
+            "kind = 'flip' "
+            "AND low_price IS NOT NULL "
+            "AND high_price IS NOT NULL "
+            "AND low_price >= 0 "
+            "AND low_price < high_price"
+            ") OR ("
+            "kind <> 'flip' "
+            "AND low_price IS NULL "
+            "AND high_price IS NULL "
+            "AND flip_outcome IS NULL"
+            ")",
+            name="ck_offers_flip_shape",
+        ),
         Index("ix_offers_item_id", "item_id"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     item_id: Mapped[int] = mapped_column(ForeignKey("items.id"))
-    buyer_username: Mapped[str] = mapped_column(String(64))
+    buyer_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
     price: Mapped[Decimal] = mapped_column(Numeric(10, 2))
     kind: Mapped[str] = mapped_column(String(16), default="claim")
     status: Mapped[str] = mapped_column(String(32), default="claimed")
     message: Mapped[str] = mapped_column(Text, default="")
+    low_price: Mapped[Optional[Decimal]] = mapped_column(
+        Numeric(10, 2), nullable=True
+    )
+    high_price: Mapped[Optional[Decimal]] = mapped_column(
+        Numeric(10, 2), nullable=True
+    )
+    flip_outcome: Mapped[Optional[str]] = mapped_column(
+        String(8), nullable=True
+    )
+    # First ``POST /offers/{id}/view`` from the buyer; NULL = reveal not seen.
+    viewed_by_buyer_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
 
     item: Mapped["Item"] = relationship(back_populates="offers")
+    buyer: Mapped["User"] = relationship(back_populates="offers")

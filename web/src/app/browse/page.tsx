@@ -7,7 +7,9 @@ import {
   api,
 } from "@/lib/api";
 import ItemCard from "@/components/ItemCard";
+import BrowseChipLink from "@/components/BrowseChipLink";
 import BrowseControls from "./BrowseControls";
+import EmptyState from "@/components/EmptyState";
 
 export const dynamic = "force-dynamic";
 
@@ -84,30 +86,29 @@ export default async function BrowsePage({
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
       <div className="flex items-end justify-between gap-4 flex-wrap">
         <div>
-          <div className="mono text-[11px] uppercase tracking-[0.2em] text-[color:var(--muted)]">
-            The whole cupboard
-          </div>
-          <h1 className="mt-1 text-3xl sm:text-4xl font-black tracking-tight">
-            Browse all drinkware
-          </h1>
+          <div className="t-eyebrow">The whole cupboard</div>
+          <h1 className="mt-1 t-display">Browse all drinkware</h1>
           <div className="mt-1 text-sm text-[color:var(--muted)]">
             Showing {items.length === 0 ? 0 : page.offset + 1}–
-            {page.offset + items.length} of {page.total} · confessed, priced,
-            still dishwasher safe · any one of these could be your next
-            confession
+            {page.offset + items.length} of {page.total} · priced, rehomable,
+            mostly dishwasher safe · one of these could be your new
+            favourite cup
           </div>
         </div>
       </div>
 
-      <div className="mt-5 flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap">
-        <Chip
+      {/* `py-2 -my-1` reserves vertical room inside the horizontal scroll
+          container so chips' sticker-shadow and slight rotation aren't clipped
+          on mobile (overflow-x:auto becomes a 2D scroll container). */}
+      <div className="mt-5 -my-1 py-2 flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap">
+        <BrowseChipLink
           href={buildHref(params, { drinkware_type: undefined })}
           active={!params.drinkware_type}
         >
           All
-        </Chip>
+        </BrowseChipLink>
         {DRINKWARE_ORDER.map((t) => (
-          <Chip
+          <BrowseChipLink
             key={t}
             href={buildHref(params, { drinkware_type: t })}
             active={params.drinkware_type === t}
@@ -116,27 +117,27 @@ export default async function BrowsePage({
             <span className="ml-1 mono text-[10px] opacity-60">
               {typeCounts[t] ?? 0}
             </span>
-          </Chip>
+          </BrowseChipLink>
         ))}
       </div>
 
-      <div className="mt-3 flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap">
-        <Chip
+      <div className="mt-3 -my-1 py-2 flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap">
+        <BrowseChipLink
           href={buildHref(params, { acquisition_source: undefined })}
           active={!params.acquisition_source}
           small
         >
           Any origin
-        </Chip>
+        </BrowseChipLink>
         {SOURCE_ORDER.map((s) => (
-          <Chip
+          <BrowseChipLink
             key={s}
             href={buildHref(params, { acquisition_source: s })}
             active={params.acquisition_source === s}
             small
           >
             {SOURCE_LABELS[s]}
-          </Chip>
+          </BrowseChipLink>
         ))}
       </div>
 
@@ -146,20 +147,27 @@ export default async function BrowsePage({
       />
 
       {items.length === 0 ? (
-        <div className="mt-10 border border-dashed border-[color:var(--border)] rounded-2xl p-10 text-center">
-          <div className="text-5xl" aria-hidden>
-            🫗
-          </div>
-          <div className="mt-3 font-bold">Nothing matched.</div>
-          <div className="text-sm text-[color:var(--muted)]">
-            Loosen the grip on your filters — or your cupboard.
-          </div>
+        <div className="mt-10">
+          <EmptyState
+            title="Nothing matched those filters."
+            body="Try loosening a chip or two."
+            ctaHref="/browse"
+            ctaLabel="Reset filters"
+            mascotSrc="/hero.png"
+            mascotAlt="Friendly drinkware mascot"
+          />
         </div>
       ) : (
         <>
           <div className="mt-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
             {items.map((l) => (
-              <ItemCard key={l.id} item={l} />
+              <div
+                key={l.id}
+                className="h-full"
+                style={{ transform: `rotate(${((l.id % 5) - 2) * 0.55}deg)` }}
+              >
+                <ItemCard item={l} />
+              </div>
             ))}
           </div>
 
@@ -178,7 +186,7 @@ export default async function BrowsePage({
                   })}
                   className="px-4 py-2 rounded-full border border-[color:var(--border)] text-sm hover:border-[color:var(--foreground)]"
                 >
-                  ← Earlier regrets
+                  ← Earlier listings
                 </Link>
               ) : (
                 <span />
@@ -194,7 +202,7 @@ export default async function BrowsePage({
                   })}
                   className="px-4 py-2 rounded-full bg-[color:var(--foreground)] text-[color:var(--background)] text-sm font-semibold"
                 >
-                  More shelf sentences →
+                  Deeper into the cupboard →
                 </Link>
               ) : (
                 <span />
@@ -230,30 +238,3 @@ function buildHref(
   return `/browse${qs ? `?${qs}` : ""}`;
 }
 
-/** Rounded filter chip used in both chip rows. */
-function Chip({
-  href,
-  active,
-  small,
-  children,
-}: {
-  href: string;
-  active?: boolean;
-  small?: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <Link
-      href={href}
-      className={`shrink-0 rounded-full border ${
-        small ? "px-3 py-1 text-xs" : "px-3.5 py-1.5 text-sm"
-      } transition ${
-        active
-          ? "bg-[color:var(--foreground)] text-[color:var(--background)] border-[color:var(--foreground)]"
-          : "border-[color:var(--border)] hover:border-[color:var(--foreground)]"
-      }`}
-    >
-      {children}
-    </Link>
-  );
-}

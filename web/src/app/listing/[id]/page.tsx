@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
@@ -7,8 +8,11 @@ import {
   discountPct,
   formatUSD,
 } from "@/lib/api";
-import ShameMeter from "@/components/ShameMeter";
+import Auctioneer from "@/components/Auctioneer";
+import ShameMeterPlayful from "@/components/ShameMeterPlayful";
 import ClaimPanel from "./ClaimPanel";
+import { formatCalendarDateUTC } from "@/lib/formatDate";
+import { RehomedStamp, StickerBadge, TapeStrip } from "@/components/illo";
 
 export const dynamic = "force-dynamic";
 
@@ -51,26 +55,38 @@ export default async function ListingPage({
       <div className="mt-4 grid md:grid-cols-[1.05fr_1fr] gap-6 md:gap-10">
         {/* LEFT: hero + spec list + seller */}
         <div className="space-y-6">
-          <div className="rounded-2xl border border-[color:var(--border)] bg-gradient-to-br from-[#f2ead8] via-[#e8d4b8] to-[#c26b4e]/55 aspect-square flex items-center justify-center relative">
-            <span className="text-[10rem] sm:text-[14rem] leading-none" aria-hidden>
-              {item.image_emoji}
-            </span>
-            <span className="absolute top-4 left-4 mono text-xs uppercase tracking-wider bg-white/95 px-3 py-1.5 rounded-full">
-              {DRINKWARE_LABELS[item.drinkware_type]} · {item.size_oz}oz
-            </span>
-            <span className="absolute top-4 right-4 mono text-xs uppercase tracking-wider bg-[color:var(--foreground)] text-[color:var(--background)] px-3 py-1.5 rounded-full">
-              {item.years_in_cupboard}y on shelf
-            </span>
-            {item.is_sold && (
-              <div className="absolute inset-0 flex items-center justify-center bg-[color:var(--foreground)]/80 text-[color:var(--background)] mono uppercase tracking-widest text-lg sm:text-xl rounded-2xl">
-                Rehomed
-              </div>
+          <div className="rounded-2xl border-2 border-[color:var(--foreground)] bg-gradient-to-br from-[color:var(--background)] via-[#e8d4b8] to-[color:var(--accent)]/50 aspect-square flex items-center justify-center relative overflow-hidden shadow-sticker">
+            {item.image_url ? (
+              <Image
+                src={item.image_url}
+                alt={item.title}
+                fill
+                sizes="(max-width: 768px) 100vw, 55vw"
+                className="object-cover"
+                priority
+              />
+            ) : (
+              <span
+                className="text-[10rem] sm:text-[14rem] leading-none"
+                aria-hidden
+              >
+                {item.image_emoji}
+              </span>
             )}
+            <span className="absolute top-4 left-4 z-10">
+              <StickerBadge tone="foreground">
+                {DRINKWARE_LABELS[item.drinkware_type]} · {item.size_oz}oz
+              </StickerBadge>
+            </span>
+            <span className="absolute top-4 right-4 z-10">
+              <StickerBadge tone="sky">{item.years_in_cupboard}y on shelf</StickerBadge>
+            </span>
+            {item.is_sold && <RehomedStamp size="lg" />}
           </div>
 
-          <div className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--card)] p-5">
+          <div className="rounded-2xl border-2 border-[color:var(--border)] bg-[color:var(--card)] p-5 shadow-sticker">
             <div className="mono text-[11px] uppercase tracking-wider text-[color:var(--muted)]">
-              The specs
+              The forensics
             </div>
             <dl className="mt-3 grid grid-cols-2 gap-y-2 gap-x-4 text-sm">
               <SpecRow label="Brand" value={item.brand} />
@@ -90,7 +106,10 @@ export default async function ListingPage({
             </dl>
           </div>
 
-          <div className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--card)] p-5 flex items-center gap-4">
+          <Link
+            href={`/u/${item.seller.username}`}
+            className="sticker-peel rounded-2xl border-2 border-[color:var(--border)] bg-[color:var(--card)] p-5 flex items-center gap-4 shadow-sticker"
+          >
             <div className="w-12 h-12 rounded-full bg-[color:var(--foreground)] text-[color:var(--background)] flex items-center justify-center font-black">
               {item.seller.display_name
                 .split(" ")
@@ -113,38 +132,47 @@ export default async function ListingPage({
               </div>
               <div className="mono text-[11px] text-[color:var(--muted)]">
                 @{item.seller.username} · listing since{" "}
-                {new Date(item.created_at).toLocaleDateString()}
+                {formatCalendarDateUTC(item.created_at)}
               </div>
             </div>
             <div className="text-right">
               <div className="mono text-[10px] uppercase text-[color:var(--muted)]">
-                Shame
+                Honesty index
               </div>
               <div className="font-black">{item.shame_index}/10</div>
             </div>
-          </div>
+          </Link>
         </div>
 
-        {/* RIGHT: title, price, confession, claim panel */}
+        {/* RIGHT: title, price, claim panel */}
         <div>
           <div className="mono text-[11px] uppercase tracking-[0.2em] text-[color:var(--muted)]">
             {item.brand} · {item.colorway || item.material}
           </div>
-          <h1 className="mt-2 text-3xl sm:text-4xl font-black tracking-tight">
-            {item.title}
-          </h1>
+          <h1 className="mt-2 t-display">{item.title}</h1>
+          <Auctioneer
+            title={item.title}
+            brand={item.brand}
+            drinkwareLabel={DRINKWARE_LABELS[item.drinkware_type]}
+            price={item.price}
+            yearsOnShelf={item.years_in_cupboard}
+          />
 
           <div className="mt-5 flex items-end flex-wrap gap-x-4 gap-y-2">
-            <div className="text-5xl sm:text-6xl font-black leading-none">
+            <TapeStrip
+              peelable
+              rotate={-2}
+              className="!text-3xl sm:!text-4xl !px-4 !py-2 !font-black"
+            >
               {formatUSD(item.price)}
-            </div>
+            </TapeStrip>
             {item.original_price && item.original_price > item.price && (
               <div className="flex flex-col mono text-xs">
                 <span className="line-through text-[color:var(--muted)]">
                   paid {formatUSD(item.original_price)}
                 </span>
                 <span className="text-[color:var(--accent)] font-bold uppercase tracking-wider">
-                  -{pct}% off regret
+                  {pct}% off
                 </span>
               </div>
             )}
@@ -160,43 +188,31 @@ export default async function ListingPage({
           </div>
 
           <div className="mt-5">
-            <ShameMeter value={item.shame_index} />
+            <ShameMeterPlayful value={item.shame_index} />
           </div>
-
-          {item.confession && (
-            <blockquote className="mt-6 border-l-4 border-[color:var(--accent)] pl-4 italic leading-relaxed text-[15px]">
-              &ldquo;{item.confession}&rdquo;
-              <footer className="mt-2 mono text-[11px] not-italic uppercase text-[color:var(--muted)]">
-                — @{item.seller.username}, under oath
-              </footer>
-            </blockquote>
-          )}
 
           <div className="mt-6">
             <ClaimPanel
               itemId={item.id}
               price={item.price}
               sold={item.is_sold}
+              sellerId={item.seller.id}
             />
           </div>
 
           <div className="mt-6 border-t border-[color:var(--border)] pt-5">
             <div className="mono text-[11px] uppercase text-[color:var(--muted)]">
-              Gulp cupboard promise
+              The Gulp cupboard promise
             </div>
             <ul className="mt-2 space-y-1 text-sm text-[color:var(--muted)]">
-              <li>· No authentication theatre — a cup is a cup.</li>
-              <li>· Dishwasher scars disclosed in writing.</li>
-              <li>· Sticker residue surveyed under UV.</li>
+              <li>· No authentication theatre — a cup is a cup is a cup.</li>
+              <li>· Dishwasher scars disclosed in writing, notarised in vibes.</li>
+              <li>· Sticker residue surveyed under UV, never under judgment.</li>
+              <li>· Plays well with whatever&apos;s already on your shelf.</li>
               <li>
-                · You already own {item.drinkware_type === "water_bottle"
-                  ? "four water bottles"
-                  : item.drinkware_type === "mug"
-                    ? "nine mugs"
-                    : "enough of these"}
-                . We&apos;re not going to stop you.
+                · When it&apos;s time for its next adventure, we&apos;ll be
+                here.
               </li>
-              <li>· You&apos;ll be the seller next. We&apos;ll be here.</li>
             </ul>
           </div>
         </div>
@@ -206,7 +222,7 @@ export default async function ListingPage({
         <div className="mt-14">
           <div className="flex items-end justify-between">
             <h2 className="text-xl sm:text-2xl font-black tracking-tight">
-              More {DRINKWARE_LABELS[item.drinkware_type]}s on the shelf
+              More {DRINKWARE_LABELS[item.drinkware_type]}s looking for homes
             </h2>
             <Link
               href={`/browse?drinkware_type=${item.drinkware_type}`}
@@ -220,16 +236,30 @@ export default async function ListingPage({
               <Link
                 key={l.id}
                 href={`/listing/${l.id}`}
-                className="card-hover rounded-xl border border-[color:var(--border)] bg-[color:var(--card)] p-4 flex flex-col items-start"
+                className="sticker-peel rounded-xl border-2 border-[color:var(--border)] bg-[color:var(--card)] overflow-hidden flex flex-col shadow-sticker"
               >
-                <div className="text-4xl" aria-hidden>
-                  {l.image_emoji}
+                <div className="aspect-[5/4] relative bg-gradient-to-br from-[#f2ead8] via-[#e8d4b8] to-[#c26b4e]/55 flex items-center justify-center">
+                  {l.image_url ? (
+                    <Image
+                      src={l.image_url}
+                      alt={l.title}
+                      fill
+                      sizes="(max-width: 768px) 50vw, 25vw"
+                      className="object-cover"
+                    />
+                  ) : (
+                    <span className="text-4xl" aria-hidden>
+                      {l.image_emoji}
+                    </span>
+                  )}
                 </div>
-                <div className="mt-2 text-sm font-semibold line-clamp-2">
-                  {l.title}
-                </div>
-                <div className="mt-1 mono text-xs text-[color:var(--muted)]">
-                  {formatUSD(l.price)}
+                <div className="p-4 flex flex-col items-start">
+                  <div className="text-sm font-semibold line-clamp-2">
+                    {l.title}
+                  </div>
+                  <div className="mt-1 mono text-xs text-[color:var(--muted)]">
+                    {formatUSD(l.price)}
+                  </div>
                 </div>
               </Link>
             ))}
@@ -250,10 +280,10 @@ function Badge({
 }) {
   return (
     <span
-      className={`px-2.5 py-1 rounded-full text-xs mono uppercase ${
+      className={`inline-flex px-2.5 py-1 rounded-full text-xs mono uppercase border-2 shadow-sticker font-bold ${
         accent
-          ? "bg-[color:var(--accent)] text-[color:var(--accent-ink)]"
-          : "border border-[color:var(--border)]"
+          ? "bg-[color:var(--accent)] text-[color:var(--accent-ink)] border-[color:var(--foreground)]"
+          : "border-[color:var(--border)] bg-[color:var(--card)]"
       }`}
     >
       {children}

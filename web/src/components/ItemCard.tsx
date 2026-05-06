@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import {
   DRINKWARE_LABELS,
@@ -7,38 +8,47 @@ import {
   formatUSD,
 } from "@/lib/api";
 import ShameMeter from "./ShameMeter";
+import { RehomedStamp, StickerBadge, TapeStrip } from "@/components/illo";
 
 /**
- * Classified-ad style listing card.
- *
- * Built for a flea-market feeling rather than a sneaker marketplace — a
- * single price, an optional "paid" strikethrough for the discount roast,
- * a confession preview, and the seller's handle to humanize the sale.
+ * Listing card with sticker badges, tape-strip price, and honesty index meter.
  */
 export default function ItemCard({ item }: { item: Item }) {
   const pct = discountPct(item.price, item.original_price);
   return (
     <Link
       href={`/listing/${item.id}`}
-      className="card-hover group flex flex-col rounded-2xl border border-[color:var(--border)] bg-[color:var(--card)] overflow-hidden"
+      className="sticker-peel group flex flex-col rounded-2xl border-2 border-[color:var(--foreground)] bg-[color:var(--card)] overflow-hidden shadow-sticker h-full"
     >
-      <div className="aspect-[5/4] bg-gradient-to-br from-[#f2ead8] via-[#e8d4b8] to-[#c26b4e]/55 flex items-center justify-center relative">
-        <span className="text-6xl sm:text-7xl" aria-hidden>
-          {item.image_emoji}
-        </span>
-        <span className="absolute top-2 left-2 mono text-[10px] uppercase tracking-wider bg-white/95 px-2 py-1 rounded-full">
-          {DRINKWARE_LABELS[item.drinkware_type]}
+      <div className="aspect-[5/4] bg-gradient-to-br from-[color:var(--background)] via-[#e8d4b8] to-[color:var(--accent)]/45 flex items-center justify-center relative overflow-hidden">
+        {item.image_url ? (
+          <Image
+            src={item.image_url}
+            alt={item.title}
+            fill
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+            className="object-cover"
+          />
+        ) : (
+          <div className="relative flex items-center justify-center w-full h-full">
+            <span
+              className="text-6xl sm:text-7xl opacity-90"
+              aria-hidden
+              style={{ filter: "drop-shadow(2px 2px 0 var(--foreground))" }}
+            >
+              {item.image_emoji}
+            </span>
+          </div>
+        )}
+        <span className="absolute top-2 left-2 z-10">
+          <StickerBadge tone="foreground">{DRINKWARE_LABELS[item.drinkware_type]}</StickerBadge>
         </span>
         {pct > 0 && (
-          <span className="absolute top-2 right-2 mono text-[10px] uppercase tracking-wider bg-[color:var(--accent)] text-[color:var(--accent-ink)] px-2 py-1 rounded-full font-bold">
-            -{pct}%
+          <span className="absolute top-2 right-2 z-10">
+            <StickerBadge tone="mustard">-{pct}%</StickerBadge>
           </span>
         )}
-        {item.is_sold && (
-          <span className="absolute inset-0 flex items-center justify-center bg-[color:var(--foreground)]/80 text-[color:var(--background)] mono uppercase tracking-widest text-sm">
-            Rehomed
-          </span>
-        )}
+        {item.is_sold && <RehomedStamp size="sm" />}
       </div>
       <div className="p-3 sm:p-4 flex flex-col gap-2 flex-1">
         <div className="flex items-center gap-1.5 text-[11px] mono uppercase text-[color:var(--muted)]">
@@ -46,25 +56,21 @@ export default function ItemCard({ item }: { item: Item }) {
           <span>·</span>
           <span className="truncate">{item.years_in_cupboard}y on shelf</span>
         </div>
-        <div className="font-bold leading-tight line-clamp-2 text-sm sm:text-base">
+        <div className="font-bold leading-tight line-clamp-2 text-sm sm:text-base font-sans">
           {item.title}
         </div>
-        {item.confession && (
-          <p className="text-xs text-[color:var(--muted)] leading-snug line-clamp-2 italic">
-            &ldquo;{item.confession}&rdquo;
+        {!item.is_sold && item.condition ? (
+          <p className="text-[11px] sm:text-xs text-[color:var(--muted)] line-clamp-2 leading-snug">
+            {item.condition}
           </p>
-        )}
+        ) : null}
         <div className="mt-auto flex items-end justify-between gap-3 pt-2">
           <div>
-            <div className="text-xl sm:text-2xl font-black leading-none">
-              {formatUSD(item.price)}
-            </div>
+            <TapeStrip rotate={-3}>{formatUSD(item.price)}</TapeStrip>
             {item.original_price && item.original_price > item.price && (
-              <div className="mono text-[11px] text-[color:var(--muted)] mt-1">
+              <div className="mono text-[11px] text-[color:var(--muted)] mt-2">
                 paid{" "}
-                <span className="line-through">
-                  {formatUSD(item.original_price)}
-                </span>
+                <span className="line-through">{formatUSD(item.original_price)}</span>
               </div>
             )}
           </div>
