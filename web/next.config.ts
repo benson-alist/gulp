@@ -8,6 +8,7 @@ const apiUrl = new URL(
 );
 
 const nextConfig: NextConfig = {
+  output: "standalone",
   images: {
     remotePatterns: [
       {

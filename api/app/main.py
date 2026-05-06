@@ -32,6 +32,7 @@ import logging
 import os
 import secrets
 from contextlib import asynccontextmanager
+from pathlib import Path
 from datetime import datetime, timezone
 from decimal import Decimal
 from typing import AsyncIterator, Optional
@@ -65,14 +66,24 @@ from .flip_buyer_view_reset import clear_resolved_flip_buyer_views
 _log = logging.getLogger("gulp.api")
 
 
+def _run_alembic_upgrade() -> None:
+    """Run ``alembic upgrade head`` in-process for PaaS deployments."""
+    from alembic import command
+    from alembic.config import Config
+
+    alembic_cfg = Config(
+        str(Path(__file__).resolve().parent.parent / "alembic.ini")
+    )
+    alembic_cfg.set_main_option("sqlalchemy.url", settings.database_url)
+    command.upgrade(alembic_cfg, "head")
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     """App lifespan hook.
 
-    Schema creation is the exclusive responsibility of Alembic migrations
-    (`alembic upgrade head`). We deliberately do NOT call
-    `Base.metadata.create_all` here — a missing migration should fail loudly
-    in CI/prod rather than be silently papered over at startup.
+    When ``settings.run_migrations_on_startup`` is enabled (PaaS like Railway),
+    Alembic migrations run before the app accepts traffic.
 
     When ``settings.reset_flip_buyer_views_on_boot`` is enabled (local dev),
     resolved coin-flip rows have ``viewed_by_buyer_at`` cleared once at
@@ -81,6 +92,13 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     The activity hub attaches to the running loop so sync route handlers can
     publish SSE events via :func:`activity_hub.publish`.
     """
+    if settings.run_migrations_on_startup and not os.environ.get(
+        "GULP_RUNNING_TESTS"
+    ):
+        _log.info("Running Alembic migrations (run_migrations_on_startup=true)...")
+        _run_alembic_upgrade()
+        _log.info("Migrations complete.")
+
     activity_hub.attach_loop(asyncio.get_running_loop())
     if settings.reset_flip_buyer_views_on_boot and not os.environ.get(
         "GULP_RUNNING_TESTS"

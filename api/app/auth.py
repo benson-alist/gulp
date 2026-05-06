@@ -99,7 +99,7 @@ def set_auth_cookie(response: Response, token: str) -> None:
     Cookie attributes are sourced from settings so dev (no HTTPS) and prod
     (HTTPS + cross-subdomain) behave consistently.
     """
-    response.set_cookie(
+    kwargs: dict = dict(
         key=settings.cookie_name,
         value=token,
         max_age=settings.jwt_ttl_seconds,
@@ -108,16 +108,22 @@ def set_auth_cookie(response: Response, token: str) -> None:
         samesite=settings.cookie_samesite,
         path="/",
     )
+    if settings.cookie_domain:
+        kwargs["domain"] = settings.cookie_domain
+    response.set_cookie(**kwargs)
 
 
 def clear_auth_cookie(response: Response) -> None:
     """Clear the auth cookie using matching attributes so browsers evict it."""
-    response.delete_cookie(
+    kwargs: dict = dict(
         key=settings.cookie_name,
         path="/",
         secure=settings.cookie_secure,
         samesite=settings.cookie_samesite,
     )
+    if settings.cookie_domain:
+        kwargs["domain"] = settings.cookie_domain
+    response.delete_cookie(**kwargs)
 
 
 # ---------------------------------------------------------------------------
