@@ -1,0 +1,113 @@
+name: Deploy to Railway
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: gulp
+          POSTGRES_PASSWORD: gulp
+          POSTGRES_DB: gulp_marketplace
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U gulp"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: api/requirements.txt
+
+      - name: Install API dependencies
+        run: pip install -r requirements.txt
+        working-directory: api
+
+      - name: Run migrations
+        run: alembic upgrade head
+        working-directory: api
+        env:
+          DATABASE_URL: postgresql+psycopg2://gulp:gulp@localhost:5432/gulp_marketplace
+
+      - name: Run API tests
+        run: python -m pytest -q
+        working-directory: api
+        env:
+          DATABASE_URL: postgresql+psycopg2://gulp:gulp@localhost:5432/gulp_marketplace
+          JWT_SECRET: ci-test-secret
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install web dependencies
+        run: npm ci
+        working-directory: web
+
+      - name: Lint web
+        run: npm run lint
+        working-directory: web
+
+      - name: Run web tests
+        run: npm test
+        working-directory: web
+
+      - name: Build web
+        run: npm run build
+        working-directory: web
+        env:
+          NEXT_PUBLIC_API_BASE_URL: ${{ vars.NEXT_PUBLIC_API_BASE_URL }}
+
+  deploy-api:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy API service
+        # --service  targets the API service by name (set RAILWAY_API_SERVICE in repo vars)
+        # --detach   returns immediately; Railway builds + deploys asynchronously
+        run: |
+          railway up \
+            --service "${{ vars.RAILWAY_API_SERVICE }}" \
+            --detach
+        working-directory: api
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+  deploy-web:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy Web service
+        run: |
+          railway up \
+            --service "${{ vars.RAILWAY_WEB_SERVICE }}" \
+            --detach
+        working-directory: web
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
