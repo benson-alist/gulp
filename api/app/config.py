@@ -53,6 +53,7 @@ class Settings(BaseSettings):
     cookie_samesite: str = "lax"
     cookie_domain: Optional[str] = None
     run_migrations_on_startup: bool = False
+    seed_on_startup: bool = False
     reset_flip_buyer_views_on_boot: bool = False
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
