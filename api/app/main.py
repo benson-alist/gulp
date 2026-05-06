@@ -99,6 +99,12 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         _run_alembic_upgrade()
         _log.info("Migrations complete.")
 
+    if settings.seed_on_startup and not os.environ.get("GULP_RUNNING_TESTS"):
+        _log.info("Running seed (seed_on_startup=true)...")
+        from seed import run as seed_run
+        seed_run()
+        _log.info("Seed complete.")
+
     activity_hub.attach_loop(asyncio.get_running_loop())
     if settings.reset_flip_buyer_views_on_boot and not os.environ.get(
         "GULP_RUNNING_TESTS"
