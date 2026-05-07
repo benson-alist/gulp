@@ -124,7 +124,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
 
 
 API_DESCRIPTION = """
-Gulp is a parody marketplace where drinkware finds a new cupboard. This is the
+Gulp is a marketplace where drinkware finds a new cupboard. This is the
 backend HTTP API consumed by the Next.js web client and, optionally, by anyone
 who wants to poke at it directly.
 
@@ -204,7 +204,7 @@ app = FastAPI(
     lifespan=lifespan,
     openapi_tags=OPENAPI_TAGS,
     contact={"name": "Gulp Marketplace"},
-    license_info={"name": "Parody, for educational use"},
+    license_info={"name": "MIT-style, do whatever"},
     swagger_ui_parameters={
         # Keep the endpoint list collapsed by default so the tag groups
         # stay legible when the API grows.
@@ -275,7 +275,6 @@ def custom_openapi() -> dict:
         ("patch", "/items/{item_id}"),
         ("get", "/items/{item_id}/offers"),
         ("post", "/offers"),
-        ("post", "/offers/{offer_id}/flip"),
         ("post", "/offers/{offer_id}/reject"),
         ("post", "/offers/{offer_id}/view"),
         ("get", "/users/me/items"),
@@ -368,8 +367,8 @@ async def activity_events() -> StreamingResponse:
 def stats(db: Session = Depends(get_db)) -> schemas.Stats:
     """Summary metrics powering the homepage hero.
 
-    All six figures come from a single round-trip using scalar subqueries so
-    the home page doesn't pay for six sequential scans.
+    All figures come from a single round-trip using scalar subqueries so
+    the home page doesn't pay for multiple sequential scans.
     """
     row = db.execute(
         select(
@@ -377,7 +376,6 @@ def stats(db: Session = Depends(get_db)) -> schemas.Stats:
             func.coalesce(func.sum(models.Item.years_in_cupboard), 0).label(
                 "cupboard_years"
             ),
-            func.coalesce(func.avg(models.Item.shame_index), 0).label("avg_shame"),
             func.coalesce(func.sum(models.Item.price), 0).label("value_liberated"),
             select(func.count(models.Offer.id)).scalar_subquery().label(
                 "total_offers"
@@ -388,7 +386,6 @@ def stats(db: Session = Depends(get_db)) -> schemas.Stats:
     return schemas.Stats(
         total_items=int(row.total_items),
         cupboard_years_liberated=int(row.cupboard_years),
-        average_shame=round(float(row.avg_shame), 1),
         total_offers=int(row.total_offers),
         value_liberated_usd=round(float(row.value_liberated), 2),
     )
@@ -692,7 +689,7 @@ def list_items(
     acquisition_source: Optional[str] = None,
     sort: str = Query(
         "trending",
-        pattern="^(trending|price_asc|price_desc|shame_desc|newest|longest_shelf)$",
+        pattern="^(trending|price_asc|price_desc|newest|longest_shelf)$",
     ),
     limit: int = Query(60, ge=1, le=200),
     offset: int = Query(0, ge=0),
@@ -704,7 +701,7 @@ def list_items(
         drinkware_type: Exact match on one of the drinkware enums.
         acquisition_source: Exact match on one of the acquisition enums.
         sort: Ordering key (`trending`, `price_asc`, `price_desc`,
-            `shame_desc`, `newest`, `longest_shelf`).
+            `newest`, `longest_shelf`).
         limit: Page size (1..200).
         offset: Rows to skip for pagination.
     """
@@ -734,22 +731,16 @@ def list_items(
         stmt = stmt.order_by(models.Item.price.asc(), models.Item.id.asc())
     elif sort == "price_desc":
         stmt = stmt.order_by(models.Item.price.desc(), models.Item.id.desc())
-    elif sort == "shame_desc":
-        stmt = stmt.order_by(
-            models.Item.shame_index.desc(), models.Item.id.desc()
-        )
     elif sort == "newest":
         stmt = stmt.order_by(models.Item.created_at.desc(), models.Item.id.desc())
     elif sort == "longest_shelf":
         stmt = stmt.order_by(
             models.Item.years_in_cupboard.desc(),
-            models.Item.shame_index.desc(),
             models.Item.id.desc(),
         )
-    else:  # trending = recent + a nudge from shame
+    else:  # trending = recent first
         stmt = stmt.order_by(
             models.Item.created_at.desc(),
-            models.Item.shame_index.desc(),
             models.Item.id.desc(),
         )
 
@@ -974,11 +965,11 @@ def create_offer(
     - **Lower offer** (``price`` below asking): buyer proposes a number the
       seller can accept later. Row: ``kind="offer"``,
       ``status="awaiting_seller"``; item remains listed.
-    - **Coin flip** (both ``low_price`` and ``high_price``): buyer proposes
-      a 50/50 gamble — ``low_price`` is paid on win, ``high_price`` on lose.
-      The server enforces ``low_price < asking < high_price`` so the flip is
-      a real gamble. Row: ``kind="flip"``, ``status="awaiting_seller"``,
-      ``price=(low+high)/2`` as a placeholder expected value.
+    - **Coin flip** (both ``low_price`` and ``high_price``): 50/50 gamble —
+      ``low_price`` on buyer win, ``high_price`` on lose. The server resolves
+      immediately on submit: row is ``kind="flip"`` with
+      ``status="flipped_won"`` or ``flipped_lost"`` and the item is sold in
+      the same transaction.
 
     Guards:
 
@@ -1015,6 +1006,7 @@ def create_offer(
 
     asking: Decimal = item.price
     is_flip = payload.low_price is not None or payload.high_price is not None
+    offer_flip_outcome: str | None = None
 
     if is_flip:
         if payload.price is not None:
@@ -1041,11 +1033,19 @@ def create_offer(
                     "losses."
                 ),
             )
-        price = (low + high) / Decimal(2)
+        buyer_won = secrets.randbelow(2) == 0
+        if buyer_won:
+            offer_flip_outcome = "win"
+            status_ = "flipped_won"
+            price = low
+        else:
+            offer_flip_outcome = "lose"
+            status_ = "flipped_lost"
+            price = high
         kind = "flip"
-        status_ = "awaiting_seller"
-        low_price: Optional[Decimal] = low
-        high_price: Optional[Decimal] = high
+        low_price = low
+        high_price = high
+        item.is_sold = True
     elif payload.price is None:
         price = asking
         kind = "claim"
@@ -1078,6 +1078,7 @@ def create_offer(
         message=(payload.message or "").strip(),
         low_price=low_price,
         high_price=high_price,
+        flip_outcome=offer_flip_outcome,
     )
     db.add(offer)
     db.commit()
@@ -1105,10 +1106,13 @@ def create_offer(
                 }
             )
         else:
+            outcome = "won" if offer.flip_outcome == "win" else "lost"
             activity_hub.publish(
                 {
-                    "kind": "flip",
-                    "text": f"🪙 @{buyer_name} proposed a coin flip",
+                    "kind": "flip_resolved",
+                    "text": (
+                        f"🪙 @{buyer_name} {outcome} the flip — cup rehomed"
+                    ),
                 }
             )
     except Exception:
@@ -1121,8 +1125,8 @@ def _load_pending_offer_for_seller(
 ) -> models.Offer:
     """Fetch a pending offer owned by ``seller`` (as item seller), or raise.
 
-    Used by the seller-side resolution endpoints. Locks the offer row so two
-    concurrent accept/reject requests cannot both succeed. Raises:
+    Used by :func:`reject_offer`. Locks the offer row so two concurrent
+    reject requests cannot both succeed. Raises:
 
     - 404 if the offer does not exist.
     - 403 if the caller is not the seller of the offer's item.
@@ -1132,8 +1136,7 @@ def _load_pending_offer_for_seller(
     lock to the ``offers`` table only. This matters on Postgres, which
     refuses ``FOR UPDATE`` on the nullable side of a ``LEFT OUTER JOIN`` —
     and ``joinedload`` always renders as an outer join. The lock still
-    protects the mutation target; the ``item`` row has its own separate
-    ``FOR UPDATE`` inside :func:`resolve_flip` when we flip ``is_sold``.
+    protects the mutation target.
     """
     offer = db.execute(
         select(models.Offer)
@@ -1158,114 +1161,10 @@ def _load_pending_offer_for_seller(
 
 
 @app.post(
-    "/offers/{offer_id}/flip",
-    response_model=schemas.OfferOut,
-    tags=["Offers"],
-    summary="Resolve a pending coin-flip offer (seller-only)",
-    responses={
-        **_UNAUTHORIZED_RESPONSE,
-        **_FORBIDDEN_RESPONSE,
-        **_NOT_FOUND_RESPONSE,
-        400: {
-            "description": "Offer is not a coin flip.",
-            "content": {
-                "application/json": {
-                    "example": {"detail": "This offer isn't a coin flip."}
-                }
-            },
-        },
-        409: {
-            "description": "Item already sold or offer no longer pending.",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "detail": "This cup already found a cupboard. The circle continues."
-                    }
-                }
-            },
-        },
-    },
-)
-def resolve_flip(
-    offer_id: int,
-    db: Session = Depends(get_db),
-    current_user: models.User = Depends(auth.get_current_user),
-) -> models.Offer:
-    """Flip the coin and lock in the outcome, from the seller's side.
-
-    Flow, inside a single transaction:
-
-    1. Lock the pending flip offer and verify caller is the item's seller.
-    2. Lock the item via ``SELECT ... FOR UPDATE`` and verify it is still
-       unsold — if not, 409.
-    3. Draw a fair coin with :func:`secrets.randbelow` (``win`` = buyer pays
-       ``low_price``, ``lose`` = buyer pays ``high_price``).
-    4. Persist the outcome: set ``flip_outcome``, overwrite ``price`` with the
-       settlement amount, advance status to ``flipped_won`` / ``flipped_lost``,
-       and mark the item sold.
-
-    The returned :class:`OfferOut` includes ``flip_outcome`` and the final
-    ``price`` so the UI can render the reveal without another round trip.
-    """
-    offer = _load_pending_offer_for_seller(db, offer_id, current_user)
-
-    if offer.kind != "flip":
-        raise HTTPException(
-            status_code=400, detail="This offer isn't a coin flip."
-        )
-    if offer.low_price is None or offer.high_price is None:
-        # Defensive: the DB CHECK guarantees both are set on flip rows, but a
-        # broken migration history shouldn't crash with an AttributeError.
-        raise HTTPException(
-            status_code=409, detail="Flip offer is missing its candidate prices."
-        )
-
-    item = db.execute(
-        select(models.Item)
-        .where(models.Item.id == offer.item_id)
-        .with_for_update()
-    ).scalar_one()
-    if item.is_sold:
-        raise HTTPException(
-            status_code=409,
-            detail="This cup already found a cupboard. The circle continues.",
-        )
-
-    # Fair coin: secrets.randbelow avoids the subtle modulo bias of % 2 on
-    # platforms where the PRNG returns a bounded range.
-    buyer_won = secrets.randbelow(2) == 0
-    if buyer_won:
-        offer.flip_outcome = "win"
-        offer.status = "flipped_won"
-        offer.price = Decimal(offer.low_price)
-    else:
-        offer.flip_outcome = "lose"
-        offer.status = "flipped_lost"
-        offer.price = Decimal(offer.high_price)
-
-    item.is_sold = True
-    db.commit()
-    db.refresh(offer)
-    db.refresh(offer, attribute_names=["buyer"])
-    try:
-        buyer_name = offer.buyer.username if offer.buyer is not None else "buyer"
-        outcome = "won" if buyer_won else "lost"
-        activity_hub.publish(
-            {
-                "kind": "flip_resolved",
-                "text": f"🪙 @{buyer_name} {outcome} the flip — cup rehomed",
-            }
-        )
-    except Exception:
-        pass
-    return offer
-
-
-@app.post(
     "/offers/{offer_id}/reject",
     response_model=schemas.OfferOut,
     tags=["Offers"],
-    summary="Reject a pending offer or coin-flip proposal (seller-only)",
+    summary="Reject a pending offer (seller-only)",
     responses={
         **_UNAUTHORIZED_RESPONSE,
         **_FORBIDDEN_RESPONSE,
@@ -1285,11 +1184,12 @@ def reject_offer(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user),
 ) -> models.Offer:
-    """Mark a pending offer / flip as ``rejected`` from the seller's side.
+    """Mark a pending lower offer as ``rejected`` from the seller's side.
 
-    Works for both ``kind='offer'`` and ``kind='flip'``. A claim is already
-    terminal so it cannot be rejected (it would be returned 409 by
-    :func:`_load_pending_offer_for_seller` because its status is ``claimed``).
+    Coin-flip rows resolve immediately on creation; there is no pending flip
+    state. A claim is already terminal so it cannot be rejected (it would be
+    returned 409 by :func:`_load_pending_offer_for_seller` because its status
+    is ``claimed``).
     """
     offer = _load_pending_offer_for_seller(db, offer_id, current_user)
     offer.status = "rejected"

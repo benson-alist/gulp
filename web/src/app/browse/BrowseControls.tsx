@@ -8,7 +8,6 @@ const SORT_OPTIONS: { value: SortKey; label: string }[] = [
   { value: "trending", label: "Trending" },
   { value: "newest", label: "Newest" },
   { value: "longest_shelf", label: "Longest shelf" },
-  { value: "shame_desc", label: "Honesty ↑" },
   { value: "price_asc", label: "Price ↑" },
   { value: "price_desc", label: "Price ↓" },
 ];

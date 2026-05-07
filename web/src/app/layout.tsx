@@ -33,7 +33,7 @@ const mono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Gulp — The marketplace for one too many",
   description:
-    "Gulp is a parody marketplace where drinkware finds a new cupboard. Mugs, water bottles, shot glasses, and the occasional wine glass that holds a full bottle.",
+    "Gulp is a marketplace where drinkware finds a new cupboard. Mugs, water bottles, shot glasses, and the occasional wine glass that holds a full bottle.",
   manifest: "/manifest.webmanifest",
   icons: {
     icon: [
@@ -151,7 +151,7 @@ export default function RootLayout({
                     />
                   </div>
                   <div className="mono text-[11px] uppercase tracking-wider text-center sm:max-w-xs sm:text-right">
-                    A parody marketplace. Please hydrate responsibly.
+                    Please hydrate responsibly.
                     <br />
                     Every cup deserves a cupboard that wants it.
                   </div>

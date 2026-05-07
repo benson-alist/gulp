@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
   AcquisitionSource,
+  DRINKWARE_EMOJI,
   DRINKWARE_LABELS,
   DrinkwareType,
   SOURCE_LABELS,
@@ -16,6 +17,7 @@ import IntegratedMascot from "@/components/IntegratedMascot";
 import Confetti from "@/components/Confetti";
 import CelebrationToast from "@/components/CelebrationToast";
 import { roastAfterList } from "@/lib/celebrationRoasts";
+import { stockImagesForType } from "@/lib/stockImages";
 
 const DRINKWARE_TYPES: DrinkwareType[] = [
   "mug",
@@ -36,21 +38,6 @@ const SOURCES: AcquisitionSource[] = [
   "gift",
   "inherited",
   "impulse_buy",
-];
-
-const EMOJIS = [
-  "☕️",
-  "🥛",
-  "🍺",
-  "🍷",
-  "🥃",
-  "🧴",
-  "🥤",
-  "🫙",
-  "🍶",
-  "🥂",
-  "🍵",
-  "🪣",
 ];
 
 /**
@@ -80,7 +67,6 @@ export default function SellForm() {
     material: "ceramic",
     colorway: "",
     condition: "Used — lightly sipped",
-    shame_index: 5,
     years_in_cupboard: 2,
     image_emoji: "☕️",
     image_url: null as string | null,
@@ -99,6 +85,19 @@ export default function SellForm() {
   /** Brief confetti + toast before navigating to the new listing. */
   const [listCelebration, setListCelebration] = useState(false);
   const [listToast, setListToast] = useState<string | null>(null);
+
+  /** Dropping a stock photo that doesn’t belong to the newly selected type. */
+  useEffect(() => {
+    setForm((f) => {
+      if (!f.image_url) return f;
+      const localStock =
+        f.image_url.startsWith("/products/") ||
+        f.image_url.startsWith("/categories/");
+      if (!localStock) return f;
+      if (stockImagesForType(f.drinkware_type).includes(f.image_url)) return f;
+      return { ...f, image_url: null };
+    });
+  }, [form.drinkware_type]);
 
   /** Push the picked file to the API and cache the returned URL on the form. */
   async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -133,6 +132,14 @@ export default function SellForm() {
     value: (typeof form)[K],
   ) {
     setForm((f) => ({ ...f, [key]: value }));
+  }
+
+  function selectStockImage(src: string) {
+    setForm((f) => ({
+      ...f,
+      image_url: src,
+      image_emoji: DRINKWARE_EMOJI[f.drinkware_type],
+    }));
   }
 
   /** Submit to the API and jump to the newly created listing on success. */
@@ -331,7 +338,7 @@ export default function SellForm() {
                 : "Tap to add a photo"}
             </span>
             <span className="mono text-[10px] uppercase tracking-wider">
-              JPG / PNG / WebP · up to 8 MB
+              JPG / PNG / WebP · up to 8 MB · or pick a stock image below
             </span>
           </button>
         )}
@@ -345,40 +352,39 @@ export default function SellForm() {
         )}
       </Field>
 
-      <Field label="Or a vibe emoji (used when there's no photo)">
-        <div className="flex flex-wrap gap-2">
-          {EMOJIS.map((e) => (
+      <Field label="Or pick a stock image">
+        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+          {stockImagesForType(form.drinkware_type).map((src) => (
             <button
               type="button"
-              key={e}
-              onClick={() => update("image_emoji", e)}
-              aria-pressed={form.image_emoji === e}
-              className={`w-11 h-11 rounded-lg border text-xl ${
-                form.image_emoji === e
-                  ? "border-[color:var(--foreground)] bg-[color:var(--accent)]"
-                  : "border-[color:var(--border)]"
+              key={src}
+              onClick={() => selectStockImage(src)}
+              aria-pressed={form.image_url === src}
+              className={`relative aspect-square rounded-xl overflow-hidden border-2 transition ${
+                form.image_url === src
+                  ? "border-[color:var(--foreground)] ring-2 ring-[color:var(--accent)]"
+                  : "border-[color:var(--border)] hover:border-[color:var(--foreground)]"
               }`}
             >
-              {e}
+              <Image
+                src={src}
+                alt=""
+                fill
+                sizes="120px"
+                className="object-cover"
+              />
             </button>
           ))}
         </div>
       </Field>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="max-w-md">
         <Slider
           label="Years on the shelf"
           min={0}
           max={30}
           value={form.years_in_cupboard}
           onChange={(v) => update("years_in_cupboard", v)}
-        />
-        <Slider
-          label="Honesty index"
-          min={1}
-          max={10}
-          value={form.shame_index}
-          onChange={(v) => update("shame_index", v)}
         />
       </div>
 

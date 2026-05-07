@@ -60,6 +60,23 @@ export default async function Ticker() {
       "💍 Wedding flutes: still sealed since 2019. Love lasts. Bubbly doesn't.",
       "🧽 Hand-wash only. You have never once hand-washed it.",
       "🕳️ One cup in, one cup out. Hoarders hate this one trick.",
+      "🧋 That tumbler collection could fill a kiddie pool. Zero judgment. Okay, some judgment.",
+      "💔 The mug from your ex's company retreat still has their logo. You're fine. Probably.",
+      "⏳ Your hydration era is now a museum exhibit. Dust included.",
+      "🪣 The travel mug claims it's leak-proof. Your laptop bag begs to differ.",
+      "🍺 Six pint glasses. Zero reasons you need six. Twelve reasons you'll keep all six.",
+      "🤝 You said 'one in, one out.' The one that came in brought friends.",
+      "🎡 The wine tasting set assumes you have friends to taste with. Bold assumption.",
+      "🧿 The novelty shot glass knows what it did.",
+      "📦 The moving box said 'kitchen.' It was all tumblers.",
+      "🦷 Your enamel mug stack is taller than your ambition to declutter.",
+      "🌊 That emotional-support water bottle saw you through Layoffs I–IV.",
+      "🍯 The honey dipper mug was a gift. Nobody uses it. Everyone respects it.",
+      "🪜 You bought a step stool to reach the top shelf of mugs. The mugs won.",
+      "🧼 Dishwasher-safe is a suggestion. The sticker is peeling off anyway.",
+      "🦆 The duck-shaped wine stopper is a conversation starter. The conversation is 'why.'",
+      "🤹 You can juggle three tumblers. You cannot juggle three deadlines.",
+      "🛡️ Cupboard insurance would be a thing if actuaries drank more coffee.",
     ];
 
     // Interleave listings, offers, and roasts for variety.

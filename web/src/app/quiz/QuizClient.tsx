@@ -12,13 +12,12 @@ import {
 const DEFAULT: QuizAnswers = {
   vibe: "cozy",
   origin: "gifted",
-  honesty: "medium",
   sip: "regular",
   hunt: "classic",
 };
 
 /**
- * Five-step zine-style quiz: sticker-shadow answers, scribble under each
+ * Four-step zine-style quiz: sticker-shadow answers, scribble under each
  * prompt, terracotta “verdict” card + confetti on finish.
  */
 export default function QuizClient() {
@@ -84,28 +83,6 @@ export default function QuizClient() {
       )}
 
       {!done && step === 2 && (
-        <StepPrompt title="How honest is your listing about wear and quirks?">
-          {(
-            [
-              ["low", "Low — I’m basically hydrated"],
-              ["medium", "Medium — some cups have lore"],
-              ["high", "High — my shelf is a memoir"],
-            ] as const
-          ).map(([v, label]) => (
-            <ChoiceBtn
-              key={v}
-              label={label}
-              onPick={() => {
-                setAnswers((a) => ({ ...a, honesty: v }));
-                setStep(3);
-              }}
-            />
-          ))}
-          <Back onClick={() => setStep(1)} />
-        </StepPrompt>
-      )}
-
-      {!done && step === 3 && (
         <StepPrompt title="If your cupboard had a official pour size, it’d be…">
           {(
             [
@@ -119,15 +96,15 @@ export default function QuizClient() {
               label={label}
               onPick={() => {
                 setAnswers((a) => ({ ...a, sip: v }));
-                setStep(4);
+                setStep(3);
               }}
             />
           ))}
-          <Back onClick={() => setStep(2)} />
+          <Back onClick={() => setStep(1)} />
         </StepPrompt>
       )}
 
-      {!done && step === 4 && (
+      {!done && step === 3 && (
         <StepPrompt title="When you open Browse, you’re really hunting for…">
           {(
             [
@@ -145,7 +122,7 @@ export default function QuizClient() {
               }}
             />
           ))}
-          <Back onClick={() => setStep(3)} />
+          <Back onClick={() => setStep(2)} />
         </StepPrompt>
       )}
 

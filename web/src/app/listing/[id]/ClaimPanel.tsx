@@ -3,10 +3,14 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { api, ApiError, formatUSD } from "@/lib/api";
+import { api, ApiError, formatUSD, type Offer } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import Confetti from "@/components/Confetti";
 import CelebrationToast from "@/components/CelebrationToast";
+import CoinFlipModal, {
+  COIN_FLIP_SPIN_MS,
+  type CoinFlipPhase,
+} from "@/components/CoinFlipModal";
 import {
   roastAfterClaim,
   roastAfterFlipProposal,
@@ -21,8 +25,8 @@ type Mode = "claim" | "offer" | "flip";
  *
  * - **Take it home** — claim at the asking price.
  * - **Make an offer** — numeric + message form for a lower proposal.
- * - **Flip for it** — two prices (low on win, high on lose) — the server
- *   flips the coin once the seller accepts from their dashboard.
+ * - **Flip for it** — two prices (low on win, high on lose); the server
+ *   resolves the coin as soon as you submit.
  *
  * Buyer identity is taken from the signed-in user. Anonymous visitors
  * see a login CTA; sellers viewing their own listing see an edit link
@@ -68,6 +72,27 @@ export default function ClaimPanel({
   const [celebrationToast, setCelebrationToast] = useState<string | null>(null);
   /** One-shot CSS class for a stamp thud shake on the panel chrome. */
   const [stampShake, setStampShake] = useState(false);
+  /** Instant flip reveal: spin → outcome, then ``markFlipViewed`` on dismiss. */
+  const [flipModal, setFlipModal] = useState<{
+    offer: Offer;
+    phase: CoinFlipPhase;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!flipModal || flipModal.phase !== "spinning") return;
+    const offerId = flipModal.offer.id;
+    const t = window.setTimeout(() => {
+      setFlipModal((m) =>
+        m && m.offer.id === offerId && m.phase === "spinning"
+          ? {
+              ...m,
+              phase: m.offer.flip_outcome === "win" ? "win" : "lose",
+            }
+          : m,
+      );
+    }, COIN_FLIP_SPIN_MS);
+    return () => window.clearTimeout(t);
+  }, [flipModal]);
 
   useEffect(() => {
     if (!showConfetti) return;
@@ -132,8 +157,8 @@ export default function ClaimPanel({
           This one&apos;s yours
         </div>
         <div className="mt-1 font-bold">
-          Can&apos;t bid on your own cup. Edit it, accept flips from the
-          dashboard, or wait for a taker.
+          Can&apos;t bid on your own cup. Edit it, or wait for a taker — flips
+          on your listings settle instantly for the buyer.
         </div>
         <div className="mt-4 flex flex-col sm:flex-row gap-2 justify-center">
           <Link
@@ -226,9 +251,8 @@ export default function ClaimPanel({
         router.refresh();
       } else if (result.kind === "flip") {
         setCelebrationToast(roastAfterFlipProposal(itemId));
-        setFeedback(
-          `Flip on the table — ${formatUSD(flipLow)} vs ${formatUSD(flipHigh)}. The seller flips the coin. Good luck.`,
-        );
+        setFeedback(" ");
+        setFlipModal({ offer: result, phase: "spinning" });
       } else {
         setCelebrationToast(roastAfterOffer(itemId));
         setFeedback(
@@ -247,6 +271,24 @@ export default function ClaimPanel({
 
   const expectedValue = (flipLow + flipHigh) / 2;
 
+  async function closeFlipModal() {
+    if (!flipModal?.offer || flipModal.phase === "spinning") return;
+    try {
+      await api.markFlipViewed(flipModal.offer.id);
+    } catch {
+      /* Non-fatal — the buyer can still acknowledge from the dashboard. */
+    }
+    setFlipModal(null);
+    router.refresh();
+  }
+
+  const flipOutcomeSummary =
+    flipModal && flipModal.phase !== "spinning"
+      ? flipModal.offer.flip_outcome === "win"
+        ? `You won · you pay ${formatUSD(flipModal.offer.low_price ?? flipModal.offer.price)}.`
+        : `You lost · you pay ${formatUSD(flipModal.offer.high_price ?? flipModal.offer.price)}.`
+      : null;
+
   return (
     <>
       {showConfetti ? <Confetti zClass="z-[60]" /> : null}
@@ -256,6 +298,14 @@ export default function ClaimPanel({
           onDismiss={() => setCelebrationToast(null)}
         />
       ) : null}
+      <CoinFlipModal
+        open={flipModal !== null}
+        lowPrice={flipModal?.offer.low_price ?? 0}
+        highPrice={flipModal?.offer.high_price ?? 0}
+        phase={flipModal?.phase ?? "spinning"}
+        outcomeSummary={flipOutcomeSummary}
+        onClose={closeFlipModal}
+      />
       <div
         className={`rounded-2xl border-2 border-[color:var(--foreground)] bg-[color:var(--card)] p-4 sm:p-5 shadow-sticker ${
           stampShake ? "claim-stamp-shake" : ""
@@ -318,8 +368,8 @@ export default function ClaimPanel({
                 straddle the asking ({formatUSD(price)})
               </span>
               . If you win the flip you pay the lower number; if you lose, you
-              pay the higher one. No take-backs — the seller accepts, the
-              server flips.
+              pay the higher one. No take-backs — the server flips the moment
+              you submit.
             </div>
 
             <div className="grid grid-cols-2 gap-3">

@@ -105,7 +105,7 @@ export default function CoinFlipModal({
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[color:var(--foreground)]/55 backdrop-blur-sm"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[color:var(--foreground)]/82 backdrop-blur-md"
       role="dialog"
       aria-modal="true"
       aria-labelledby={titleId}
@@ -116,7 +116,7 @@ export default function CoinFlipModal({
       {showWinCelebration ? <Confetti zClass="z-[5]" /> : null}
       <div
         className={`relative z-10 w-full max-w-md max-h-[calc(100vh-2rem)] overflow-y-auto rounded-2xl border-2 border-[color:var(--foreground)] bg-[color:var(--card)] p-6 shadow-2xl ${
-          showLoseMood ? "flip-lose-card-settle opacity-[0.97]" : ""
+          showLoseMood ? "flip-lose-card-settle" : ""
         }`}
       >
         {showLoseMood ? <div className="flip-lose-rain rounded-2xl" aria-hidden /> : null}

@@ -40,7 +40,6 @@ export default async function Home() {
     safe(() => api.stats(), {
       total_items: 0,
       cupboard_years_liberated: 0,
-      average_shame: 0,
       total_offers: 0,
       value_liberated_usd: 0,
     }),
@@ -279,7 +278,7 @@ export default async function Home() {
             num="01"
             title="List it"
             image="/how/list.png"
-            body="Tell us what it is, how long it's been on your shelf, and how upfront you're being about condition (honesty index 1–10). Pick a vibe emoji. We won't ask for photos — a cup is a cup."
+            body="Tell us what it is, how long it's been on your shelf, and how upfront you're being about condition. Add a photo or pick a stock image — a good story sells a mug faster than any filter could."
           />
           <div className="hidden lg:flex items-center justify-center text-[color:var(--accent)] shrink-0 w-14">
             <ScribbleArrow className="w-12 h-8" />

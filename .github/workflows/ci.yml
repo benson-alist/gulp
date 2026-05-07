@@ -1,4 +1,5 @@
-name: Deploy to Railway
+# API + web CI on every push to main (no deploy — use your own pipeline if needed).
+name: CI
 
 on:
   push:
@@ -73,41 +74,3 @@ jobs:
         working-directory: web
         env:
           NEXT_PUBLIC_API_BASE_URL: ${{ vars.NEXT_PUBLIC_API_BASE_URL }}
-
-  deploy-api:
-    needs: test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Railway CLI
-        run: npm install -g @railway/cli
-
-      - name: Deploy API service
-        # --service  targets the API service by name (set RAILWAY_API_SERVICE in repo vars)
-        # --detach   returns immediately; Railway builds + deploys asynchronously
-        run: |
-          railway up \
-            --service "${{ vars.RAILWAY_API_SERVICE }}" \
-            --detach
-        working-directory: api
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-
-  deploy-web:
-    needs: test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Railway CLI
-        run: npm install -g @railway/cli
-
-      - name: Deploy Web service
-        run: |
-          railway up \
-            --service "${{ vars.RAILWAY_WEB_SERVICE }}" \
-            --detach
-        working-directory: web
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}

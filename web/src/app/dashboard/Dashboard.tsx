@@ -21,7 +21,6 @@ import CoinFlipModal, {
 } from "@/components/CoinFlipModal";
 import ProfileHeader from "./ProfileHeader";
 import SettingsTab from "./SettingsTab";
-import FlipResolver from "./FlipResolver";
 import EmptyState from "@/components/EmptyState";
 
 type Tab = "listings" | "bids" | "settings";
@@ -201,7 +200,6 @@ function ListingsTab({ items }: { items: Item[] }) {
 }
 
 function SellerItemRow({ item }: { item: Item }) {
-  const router = useRouter();
   const [offers, setOffers] = useState<Offer[] | null>(null);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -220,18 +218,6 @@ function SellerItemRow({ item }: { item: Item }) {
       } finally {
         setLoading(false);
       }
-    }
-  }
-
-  /** Swap the updated offer back into local state in-place. */
-  function updateOffer(next: Offer) {
-    setOffers((prev) =>
-      prev ? prev.map((o) => (o.id === next.id ? next : o)) : prev,
-    );
-    // A resolved flip sells the item — let the server be the source of truth
-    // for the adjacent `item.is_sold` badge.
-    if (next.status === "flipped_won" || next.status === "flipped_lost") {
-      router.refresh();
     }
   }
 
@@ -302,12 +288,7 @@ function SellerItemRow({ item }: { item: Item }) {
           ) : offers && offers.length > 0 ? (
             <ul className="space-y-2">
               {offers.map((o) => (
-                <OfferRow
-                  key={o.id}
-                  offer={o}
-                  askingPrice={item.price}
-                  onUpdate={updateOffer}
-                />
+                <OfferRow key={o.id} offer={o} askingPrice={item.price} />
               ))}
             </ul>
           ) : (
@@ -324,25 +305,21 @@ function SellerItemRow({ item }: { item: Item }) {
 function OfferRow({
   offer,
   askingPrice,
-  onUpdate,
 }: {
   offer: Offer;
   askingPrice: number;
-  onUpdate: (next: Offer) => void;
 }) {
   const kindLabel =
     offer.kind === "claim"
       ? "Claimed at asking"
       : offer.kind === "flip"
-        ? "Coin-flip proposal"
+        ? "Coin flip"
         : "Lowball offer";
   const diffPct =
     offer.kind === "offer" && askingPrice > 0
       ? Math.round((1 - offer.price / askingPrice) * 100)
       : 0;
 
-  const isPendingFlip =
-    offer.kind === "flip" && offer.status === "awaiting_seller";
   const isResolvedFlip =
     offer.kind === "flip" &&
     (offer.status === "flipped_won" || offer.status === "flipped_lost");
@@ -375,16 +352,13 @@ function OfferRow({
         </div>
         <div className="text-right">
           <div className="font-black leading-none">
-            {isPendingFlip ? "—" : formatUSD(offer.price)}
+            {formatUSD(offer.price)}
           </div>
           <div className="mono text-[10px] uppercase text-[color:var(--muted)] mt-1">
             {offer.status.replace(/_/g, " ")}
           </div>
         </div>
       </div>
-      {isPendingFlip && (
-        <FlipResolver offer={offer} onUpdate={onUpdate} />
-      )}
       {isResolvedFlip && offer.low_price != null && offer.high_price != null && (
         <div className="mt-2 rounded-xl border border-[color:var(--border)] bg-[color:var(--background)]/60 p-3 mono text-[11px] uppercase tracking-wider">
           {offer.flip_outcome === "win" ? (
@@ -514,7 +488,7 @@ function BidsTab({
                     ? "Claimed"
                     : bid.kind === "flip"
                       ? unseen
-                        ? "Flip accepted"
+                        ? "Flip settled"
                         : "Flipped"
                       : "Offered"}{" "}
                   · {formatCalendarDateUTC(bid.created_at)} · asking{" "}
@@ -549,11 +523,7 @@ function BidsTab({
               </div>
               <div className="text-right shrink-0">
                 <div className="font-black leading-none">
-                  {unseen
-                    ? "—"
-                    : bid.kind === "flip" && bid.status === "awaiting_seller"
-                      ? "—"
-                      : formatUSD(bid.price)}
+                  {unseen ? "—" : formatUSD(bid.price)}
                 </div>
                 <div className="mono text-[10px] uppercase text-[color:var(--muted)] mt-1 max-w-[120px] ml-auto">
                   {unseen
