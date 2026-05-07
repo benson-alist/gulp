@@ -14,6 +14,13 @@ import { RehomedStamp, StickerBadge, TapeStrip } from "@/components/illo";
  */
 export default function ItemCard({ item }: { item: Item }) {
   const pct = discountPct(item.price, item.original_price);
+  const displayPrice =
+    item.is_sold && item.sold_price != null ? item.sold_price : item.price;
+  const showAsked =
+    item.is_sold &&
+    item.sold_price != null &&
+    Math.abs(item.sold_price - item.price) > 0.01;
+
   return (
     <Link
       href={`/listing/${item.id}`}
@@ -65,10 +72,20 @@ export default function ItemCard({ item }: { item: Item }) {
         ) : null}
         <div className="mt-auto flex items-end justify-between gap-3 pt-2">
           <div>
-            <TapeStrip rotate={-3}>{formatUSD(item.price)}</TapeStrip>
+            {item.is_sold ? (
+              <div className="mono text-[9px] uppercase tracking-wider text-[color:var(--muted)] mb-0.5">
+                Sold for
+              </div>
+            ) : null}
+            <TapeStrip rotate={-3}>{formatUSD(displayPrice)}</TapeStrip>
+            {showAsked ? (
+              <div className="mono text-[10px] text-[color:var(--muted)] mt-1">
+                Asked {formatUSD(item.price)}
+              </div>
+            ) : null}
             {item.original_price && item.original_price > item.price && (
               <div className="mono text-[11px] text-[color:var(--muted)] mt-2">
-                paid{" "}
+                Original price{" "}
                 <span className="line-through">{formatUSD(item.original_price)}</span>
               </div>
             )}

@@ -43,7 +43,7 @@ const SOURCES: AcquisitionSource[] = [
 /**
  * Mobile-friendly listing form (v3 — authed seller).
  *
- * One asking `price` field with an optional "what you paid" anchor that
+ * One asking `price` field with an optional **original price** anchor that
  * the rest of the app uses for the strikethrough roast. The seller is
  * always the currently signed-in user — the form no longer asks for a
  * handle, and bounces unauthenticated visitors to the login page.
@@ -400,7 +400,7 @@ export default function SellForm() {
             className={inputCls}
           />
         </Field>
-        <Field label="What you paid ($, optional)">
+        <Field label="Original price ($, optional)">
           <input
             type="number"
             inputMode="numeric"

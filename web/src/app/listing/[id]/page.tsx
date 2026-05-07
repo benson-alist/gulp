@@ -35,6 +35,12 @@ export default async function ListingPage({
     .catch(() => []);
 
   const pct = discountPct(item.price, item.original_price);
+  const displayPrice =
+    item.is_sold && item.sold_price != null ? item.sold_price : item.price;
+  const showAskedLine =
+    item.is_sold &&
+    item.sold_price != null &&
+    Math.abs(item.sold_price - item.price) > 0.01;
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 md:py-10">
@@ -147,28 +153,40 @@ export default async function ListingPage({
             title={item.title}
             brand={item.brand}
             drinkwareLabel={DRINKWARE_LABELS[item.drinkware_type]}
-            price={item.price}
+            price={displayPrice}
             yearsOnShelf={item.years_in_cupboard}
           />
 
-          <div className="mt-5 flex items-end flex-wrap gap-x-4 gap-y-2">
+          <div className="mt-5 flex flex-col gap-1">
+            {item.is_sold ? (
+              <span className="mono text-[10px] uppercase tracking-wider text-[color:var(--muted)]">
+                Sold for
+              </span>
+            ) : null}
+            <div className="flex items-end flex-wrap gap-x-4 gap-y-2">
             <TapeStrip
               peelable
               rotate={-2}
               className="!text-3xl sm:!text-4xl !px-4 !py-2 !font-black"
             >
-              {formatUSD(item.price)}
+              {formatUSD(displayPrice)}
             </TapeStrip>
             {item.original_price && item.original_price > item.price && (
               <div className="flex flex-col mono text-xs">
                 <span className="line-through text-[color:var(--muted)]">
-                  paid {formatUSD(item.original_price)}
+                  Original price {formatUSD(item.original_price)}
                 </span>
                 <span className="text-[color:var(--accent)] font-bold uppercase tracking-wider">
                   {pct}% off
                 </span>
               </div>
             )}
+            </div>
+            {showAskedLine ? (
+              <p className="mono text-xs text-[color:var(--muted)] mt-1">
+                Listing asked {formatUSD(item.price)}
+              </p>
+            ) : null}
           </div>
 
           <div className="mt-4 flex flex-wrap gap-2">

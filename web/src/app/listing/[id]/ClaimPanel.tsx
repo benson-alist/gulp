@@ -246,7 +246,7 @@ export default function ClaimPanel({
         setStampShake(true);
         window.setTimeout(() => setStampShake(false), 600);
         setFeedback(
-          `Claimed for ${formatUSD(result.price)}. Welcome home, cup. The seller thanks you.`,
+          `Rehomed for ${formatUSD(result.price)}. Welcome home, cup — the seller thanks you.`,
         );
         router.refresh();
       } else if (result.kind === "flip") {
@@ -273,20 +273,24 @@ export default function ClaimPanel({
 
   async function closeFlipModal() {
     if (!flipModal?.offer || flipModal.phase === "spinning") return;
+    const salePrice = flipModal.offer.price;
     try {
       await api.markFlipViewed(flipModal.offer.id);
     } catch {
       /* Non-fatal — the buyer can still acknowledge from the dashboard. */
     }
     setFlipModal(null);
+    setFeedback(
+      `This cup rehomed for ${formatUSD(salePrice)}. You'll see it on your dashboard too.`,
+    );
     router.refresh();
   }
 
   const flipOutcomeSummary =
     flipModal && flipModal.phase !== "spinning"
       ? flipModal.offer.flip_outcome === "win"
-        ? `You won · you pay ${formatUSD(flipModal.offer.low_price ?? flipModal.offer.price)}.`
-        : `You lost · you pay ${formatUSD(flipModal.offer.high_price ?? flipModal.offer.price)}.`
+        ? `You won · you pay ${formatUSD(flipModal.offer.low_price ?? flipModal.offer.price)} — cup rehomed for ${formatUSD(flipModal.offer.price)}.`
+        : `You lost · you pay ${formatUSD(flipModal.offer.high_price ?? flipModal.offer.price)} — cup rehomed for ${formatUSD(flipModal.offer.price)}.`
       : null;
 
   return (

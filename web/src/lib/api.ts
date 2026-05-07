@@ -70,6 +70,8 @@ export type Item = {
   price: number;
   original_price: number | null;
   is_sold: boolean;
+  /** Final sale price when rehomed (claim or settled flip); omitted if unknown. */
+  sold_price?: number | null;
   created_at: string;
   seller: User;
 };
@@ -114,7 +116,7 @@ export type Offer = {
   low_price: number | null;
   /** Buyer-lose price for a flip. `null` for claims and regular offers. */
   high_price: number | null;
-  /** `"win"` = buyer paid `low_price`, `"lose"` = buyer paid `high_price`. */
+  /** `"win"` = buyer pays `low_price`, `"lose"` = buyer pays `high_price`. */
   flip_outcome: FlipOutcome | null;
   /** Set after the buyer opens the post-flip reveal (`POST /offers/{id}/view`). */
   viewed_by_buyer_at: string | null;
