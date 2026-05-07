@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import {
   ApiError,
   AcquisitionSource,
+  DRINKWARE_EMOJI,
   DRINKWARE_LABELS,
   DrinkwareType,
   Item,
@@ -13,6 +14,7 @@ import {
   api,
 } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { stockImagesForType } from "@/lib/stockImages";
 
 const DRINKWARE_TYPES: DrinkwareType[] = [
   "mug",
@@ -65,7 +67,6 @@ export default function EditForm({ item }: { item: Item }) {
     material: item.material,
     colorway: item.colorway,
     condition: item.condition,
-    shame_index: item.shame_index,
     years_in_cupboard: item.years_in_cupboard,
     image_emoji: item.image_emoji,
     image_url: item.image_url,
@@ -78,8 +79,28 @@ export default function EditForm({ item }: { item: Item }) {
   const [photoError, setPhotoError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  useEffect(() => {
+    setForm((f) => {
+      if (!f.image_url) return f;
+      const localStock =
+        f.image_url.startsWith("/products/") ||
+        f.image_url.startsWith("/categories/");
+      if (!localStock) return f;
+      if (stockImagesForType(f.drinkware_type).includes(f.image_url)) return f;
+      return { ...f, image_url: null };
+    });
+  }, [form.drinkware_type]);
+
   function update<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((f) => ({ ...f, [key]: value }));
+  }
+
+  function selectStockImage(src: string) {
+    setForm((f) => ({
+      ...f,
+      image_url: src,
+      image_emoji: DRINKWARE_EMOJI[f.drinkware_type],
+    }));
   }
 
   async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -294,6 +315,9 @@ export default function EditForm({ item }: { item: Item }) {
             <span>
               {photoStatus === "uploading" ? "Uploading…" : "Tap to add a photo"}
             </span>
+            <span className="mono text-[10px] uppercase tracking-wider">
+              or pick a stock image below
+            </span>
           </button>
         )}
         {photoError && (
@@ -301,6 +325,32 @@ export default function EditForm({ item }: { item: Item }) {
             {photoError}
           </div>
         )}
+      </Field>
+
+      <Field label="Or pick a stock image">
+        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+          {stockImagesForType(form.drinkware_type).map((src) => (
+            <button
+              type="button"
+              key={src}
+              onClick={() => selectStockImage(src)}
+              aria-pressed={form.image_url === src}
+              className={`relative aspect-square rounded-xl overflow-hidden border-2 transition ${
+                form.image_url === src
+                  ? "border-[color:var(--foreground)] ring-2 ring-[color:var(--accent)]"
+                  : "border-[color:var(--border)] hover:border-[color:var(--foreground)]"
+              }`}
+            >
+              <Image
+                src={src}
+                alt=""
+                fill
+                sizes="120px"
+                className="object-cover"
+              />
+            </button>
+          ))}
+        </div>
       </Field>
 
       <div className="grid grid-cols-2 gap-3">
@@ -327,20 +377,13 @@ export default function EditForm({ item }: { item: Item }) {
         </Field>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="max-w-md">
         <Slider
           label="Years on the shelf"
           min={0}
           max={30}
           value={form.years_in_cupboard}
           onChange={(v) => update("years_in_cupboard", v)}
-        />
-        <Slider
-          label="Honesty index"
-          min={1}
-          max={10}
-          value={form.shame_index}
-          onChange={(v) => update("shame_index", v)}
         />
       </div>
 

@@ -254,7 +254,6 @@ class ItemBase(BaseModel):
     material: str = "ceramic"
     colorway: str = ""
     condition: str = "Used — lightly sipped"
-    shame_index: int = Field(default=5, ge=1, le=10)
     years_in_cupboard: int = Field(default=1, ge=0, le=60)
     image_emoji: str = "☕️"
     image_url: Optional[str] = Field(default=None, max_length=500)
@@ -295,7 +294,6 @@ class ItemUpdate(BaseModel):
     material: Optional[str] = Field(default=None, max_length=40)
     colorway: Optional[str] = Field(default=None, max_length=80)
     condition: Optional[str] = Field(default=None, max_length=80)
-    shame_index: Optional[int] = Field(default=None, ge=1, le=10)
     years_in_cupboard: Optional[int] = Field(default=None, ge=0, le=60)
     image_emoji: Optional[str] = Field(default=None, max_length=16)
     image_url: Optional[str] = Field(default=None, max_length=500)
@@ -404,9 +402,8 @@ class OfferCreate(BaseModel):
 class OfferOut(BaseModel):
     """Public-safe offer projection with the buyer embedded.
 
-    For ``kind='flip'`` rows the two candidate prices and (after the seller
-    resolves) the ``flip_outcome`` are included so the client can render a
-    proper win/lose summary without a second round trip. ``viewed_by_buyer_at``
+    For ``kind='flip'`` rows the two candidate prices and ``flip_outcome`` are
+    set on creation (the server resolves the coin immediately). ``viewed_by_buyer_at``
     is set when the buyer acknowledges the reveal animation via
     ``POST /offers/{id}/view``.
     """
@@ -442,7 +439,6 @@ class Stats(BaseModel):
 
     total_items: int
     cupboard_years_liberated: int
-    average_shame: float
     total_offers: int
     value_liberated_usd: float
 

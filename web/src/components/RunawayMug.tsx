@@ -60,7 +60,7 @@ export default function RunawayMug() {
   const onCatch = useCallback(() => {
     setCaught(true);
     setRunning(false);
-    setToast("You caught a stray! Code: SHELF10 (not real — this is a parody shop.)");
+    setToast("You caught a stray! Code: SHELF10 (purely ceremonial).");
   }, []);
 
   if (caught) {

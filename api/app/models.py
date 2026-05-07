@@ -115,32 +115,17 @@ class User(Base):
 class Item(Base):
     """A drinkware listing on Gulp.
 
-    Humor columns (`shame_index`, `years_in_cupboard`, `acquisition_source`)
-    exist so the UI can roast the seller lovingly.
+    Columns like ``years_in_cupboard`` and ``acquisition_source`` give the UI
+    fuel for playful copy about how long a piece has loitered on the shelf.
     """
 
     __tablename__ = "items"
     __table_args__ = (
-        CheckConstraint(
-            _in_list("drinkware_type", DRINKWARE_TYPES),
-            name="ck_items_drinkware_type",
-        ),
-        CheckConstraint(
-            _in_list("acquisition_source", ACQUISITION_SOURCES),
-            name="ck_items_acquisition_source",
-        ),
+        CheckConstraint(_in_list("drinkware_type", DRINKWARE_TYPES), name="ck_items_drinkware_type"),
+        CheckConstraint(_in_list("acquisition_source", ACQUISITION_SOURCES), name="ck_items_acquisition_source"),
         CheckConstraint("price >= 0", name="ck_items_price_nonneg"),
-        CheckConstraint(
-            "original_price IS NULL OR original_price >= 0",
-            name="ck_items_original_price_nonneg",
-        ),
-        CheckConstraint(
-            "shame_index BETWEEN 1 AND 10", name="ck_items_shame_index_range"
-        ),
-        CheckConstraint(
-            "years_in_cupboard BETWEEN 0 AND 60",
-            name="ck_items_years_range",
-        ),
+        CheckConstraint("original_price IS NULL OR original_price >= 0", name="ck_items_original_price_nonneg"),
+        CheckConstraint("years_in_cupboard BETWEEN 0 AND 60", name="ck_items_years_range"),
         Index("ix_items_is_sold", "is_sold"),
     )
 
@@ -153,7 +138,6 @@ class Item(Base):
     material: Mapped[str] = mapped_column(String(40), default="ceramic")
     colorway: Mapped[str] = mapped_column(String(80), default="")
     condition: Mapped[str] = mapped_column(String(80), default="Used — lightly sipped")
-    shame_index: Mapped[int] = mapped_column(Integer, default=5)
     years_in_cupboard: Mapped[int] = mapped_column(Integer, default=1)
     image_emoji: Mapped[str] = mapped_column(String(16), default="☕️")
     image_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)

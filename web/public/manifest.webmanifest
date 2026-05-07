@@ -1,7 +1,7 @@
 {
   "name": "Gulp — The marketplace for one too many",
   "short_name": "Gulp",
-  "description": "A parody marketplace where drinkware finds a new cupboard.",
+  "description": "A fun marketplace where drinkware finds a new cupboard.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

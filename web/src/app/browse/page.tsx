@@ -4,6 +4,7 @@ import {
   DrinkwareType,
   SOURCE_LABELS,
   AcquisitionSource,
+  SortKey,
   api,
 } from "@/lib/api";
 import ItemCard from "@/components/ItemCard";
@@ -13,21 +14,28 @@ import EmptyState from "@/components/EmptyState";
 
 export const dynamic = "force-dynamic";
 
-type Sort =
-  | "trending"
-  | "price_asc"
-  | "price_desc"
-  | "shame_desc"
-  | "newest"
-  | "longest_shelf";
+type Sort = SortKey;
 
 type Search = {
   q?: string;
   drinkware_type?: DrinkwareType;
   acquisition_source?: AcquisitionSource;
-  sort?: Sort;
+  sort?: string;
   offset?: string;
 };
+
+const VALID_SORTS: Sort[] = [
+  "trending",
+  "price_asc",
+  "price_desc",
+  "newest",
+  "longest_shelf",
+];
+
+function normalizeSort(raw: string | undefined): Sort {
+  if (raw && VALID_SORTS.includes(raw as Sort)) return raw as Sort;
+  return "trending";
+}
 
 const PAGE_SIZE = 48;
 
@@ -58,7 +66,9 @@ export default async function BrowsePage({
 }: {
   searchParams: Promise<Search>;
 }) {
-  const params = await searchParams;
+  const raw = await searchParams;
+  const sort = normalizeSort(raw.sort);
+  const params: Search = { ...raw, sort };
   const offset = Math.max(0, Number(params.offset ?? "0") || 0);
   const [page, types] = await Promise.all([
     api
@@ -66,7 +76,7 @@ export default async function BrowsePage({
         q: params.q,
         drinkware_type: params.drinkware_type,
         acquisition_source: params.acquisition_source,
-        sort: params.sort ?? "trending",
+        sort: sort,
         limit: PAGE_SIZE,
         offset,
       })
@@ -143,7 +153,7 @@ export default async function BrowsePage({
 
       <BrowseControls
         defaultQ={params.q ?? ""}
-        defaultSort={params.sort ?? "trending"}
+        defaultSort={sort}
       />
 
       {items.length === 0 ? (

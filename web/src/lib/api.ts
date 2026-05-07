@@ -41,7 +41,6 @@ export type SortKey =
   | "trending"
   | "price_asc"
   | "price_desc"
-  | "shame_desc"
   | "newest"
   | "longest_shelf";
 
@@ -65,7 +64,6 @@ export type Item = {
   material: string;
   colorway: string;
   condition: string;
-  shame_index: number;
   years_in_cupboard: number;
   image_emoji: string;
   image_url: string | null;
@@ -79,7 +77,6 @@ export type Item = {
 export type Stats = {
   total_items: number;
   cupboard_years_liberated: number;
-  average_shame: number;
   total_offers: number;
   value_liberated_usd: number;
 };
@@ -210,7 +207,6 @@ export type ItemCreateInput = {
   material: string;
   colorway: string;
   condition: string;
-  shame_index: number;
   years_in_cupboard: number;
   image_emoji?: string;
   image_url?: string | null;
@@ -279,8 +275,8 @@ export const api = {
     }),
 
   /**
-   * Propose a coin flip. `low_price` is paid if the buyer wins, `high_price`
-   * if they lose. The API enforces `low < asking < high`.
+   * Coin flip: `low_price` if the buyer wins, `high_price` if they lose.
+   * The API enforces `low < asking < high` and resolves the flip immediately.
    */
   proposeFlip: (payload: {
     item_id: number;
@@ -293,14 +289,7 @@ export const api = {
       body: JSON.stringify(payload),
     }),
 
-  /**
-   * Seller-only: accept a pending flip. The server draws the coin and
-   * returns the resolved `Offer` with `flip_outcome` set.
-   */
-  resolveFlip: (offerId: number) =>
-    req<Offer>(`/offers/${offerId}/flip`, { method: "POST" }),
-
-  /** Seller-only: reject a pending offer or flip. */
+  /** Seller-only: reject a pending lower offer. */
   rejectOffer: (offerId: number) =>
     req<Offer>(`/offers/${offerId}/reject`, { method: "POST" }),
 

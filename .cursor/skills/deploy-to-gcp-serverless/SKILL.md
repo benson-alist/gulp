@@ -74,7 +74,7 @@ This script:
 - Deploys API and Web Cloud Run services
 - Updates API `ALLOWED_ORIGINS` with deployed Web URL
 
-CI/CD (`.github/workflows/deploy.yml`) runs the same CORS step on every deploy.
+GitHub CI (`.github/workflows/ci.yml`) runs API migrations + tests and web lint/tests/build on push to `main`. GCP deploy is done via this skill’s `deploy.sh` (not from that workflow).
 
 ## Verification
 

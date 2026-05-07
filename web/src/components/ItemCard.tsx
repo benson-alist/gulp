@@ -7,11 +7,10 @@ import {
   discountPct,
   formatUSD,
 } from "@/lib/api";
-import ShameMeter from "./ShameMeter";
 import { RehomedStamp, StickerBadge, TapeStrip } from "@/components/illo";
 
 /**
- * Listing card with sticker badges, tape-strip price, and honesty index meter.
+ * Listing card with sticker badges and tape-strip price.
  */
 export default function ItemCard({ item }: { item: Item }) {
   const pct = discountPct(item.price, item.original_price);
@@ -73,9 +72,6 @@ export default function ItemCard({ item }: { item: Item }) {
                 <span className="line-through">{formatUSD(item.original_price)}</span>
               </div>
             )}
-          </div>
-          <div className="w-24">
-            <ShameMeter value={item.shame_index} compact />
           </div>
         </div>
       </div>

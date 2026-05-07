@@ -9,7 +9,6 @@ import {
   formatUSD,
 } from "@/lib/api";
 import Auctioneer from "@/components/Auctioneer";
-import ShameMeterPlayful from "@/components/ShameMeterPlayful";
 import ClaimPanel from "./ClaimPanel";
 import { formatCalendarDateUTC } from "@/lib/formatDate";
 import { RehomedStamp, StickerBadge, TapeStrip } from "@/components/illo";
@@ -135,12 +134,6 @@ export default async function ListingPage({
                 {formatCalendarDateUTC(item.created_at)}
               </div>
             </div>
-            <div className="text-right">
-              <div className="mono text-[10px] uppercase text-[color:var(--muted)]">
-                Honesty index
-              </div>
-              <div className="font-black">{item.shame_index}/10</div>
-            </div>
           </Link>
         </div>
 
@@ -185,10 +178,6 @@ export default async function ListingPage({
               @{item.seller.username}
               {item.seller.verified ? " ✓" : ""}
             </Badge>
-          </div>
-
-          <div className="mt-5">
-            <ShameMeterPlayful value={item.shame_index} />
           </div>
 
           <div className="mt-6">

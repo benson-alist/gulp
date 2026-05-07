@@ -142,7 +142,6 @@ def _item_payload(**overrides) -> dict:
         "material": "ceramic",
         "colorway": "",
         "condition": "Used — lightly sipped",
-        "shame_index": 5,
         "years_in_cupboard": 2,
         "image_emoji": "☕️",
         "price": 10,

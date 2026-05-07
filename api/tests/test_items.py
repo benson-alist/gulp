@@ -104,26 +104,15 @@ def test_item_create_requires_authentication(client: TestClient) -> None:
     assert res.status_code == 401
 
 
-@pytest.mark.parametrize("shame", [0, 11])
-def test_item_create_rejects_shame_out_of_range(
-    client: TestClient, shame: int
-) -> None:
-    """`shame_index` is clamped to 1..10."""
-    login_as(client, "seed_seller")
-    res = client.post("/items", json=item_payload(shame_index=shame))
-    assert res.status_code == 422
-
-
 def test_stats_aggregates(client: TestClient, make_item) -> None:
     """`/stats` reflects created items and their aggregates."""
-    make_item(price=10, years_in_cupboard=3, shame_index=8)
-    make_item(price=20, years_in_cupboard=2, shame_index=4)
+    make_item(price=10, years_in_cupboard=3)
+    make_item(price=20, years_in_cupboard=2)
 
     body = client.get("/stats").json()
     assert body["total_items"] == 2
     assert body["cupboard_years_liberated"] == 5
     assert body["value_liberated_usd"] == 30.0
-    assert body["average_shame"] == 6.0
 
 
 def test_item_types_counts(client: TestClient, make_item) -> None:
