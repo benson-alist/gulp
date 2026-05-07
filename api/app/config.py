@@ -13,7 +13,15 @@ class Settings(BaseSettings):
         database_url: SQLAlchemy URL for the local PostgreSQL instance.
             Railway (and others) provide ``postgresql://`` URLs which are
             auto-rewritten to include the ``+psycopg2`` driver prefix.
-        cors_origins: Comma-separated list of allowed browser origins.
+        cors_origins: Comma-separated list of exact-match browser origins
+            (scheme + host, no path). Required because ``allow_credentials``
+            forbids the ``*`` wildcard.
+        cors_origin_regex: Optional Python regex matched against the request
+            ``Origin`` header. Use this to whitelist Vercel preview URLs
+            (which change every deploy), e.g.
+            ``^https://gulp(-[a-z0-9]+)*-benson-alists-projects\\.vercel\\.app$``.
+            Either ``cors_origins`` or ``cors_origin_regex`` (or both) must
+            allow the caller's origin for credentialed requests to succeed.
         upload_dir: Directory (absolute, or relative to the ``api/`` root)
             where user-uploaded listing photos are written. In dev this is
             served back via ``/uploads/*``; in prod, swap for GCS.
@@ -44,6 +52,7 @@ class Settings(BaseSettings):
 
     database_url: str = "postgresql+psycopg2://gulp:gulp@localhost:5432/gulp_marketplace"
     cors_origins: str = "http://localhost:3000"
+    cors_origin_regex: Optional[str] = None
     upload_dir: str = "uploads"
     jwt_secret: str = "dev-only-insecure-secret-change-me"
     jwt_algorithm: str = "HS256"
