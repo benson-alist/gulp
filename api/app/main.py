@@ -672,6 +672,50 @@ def delete_me(
     return response
 
 
+def _usd_label(amount: Decimal) -> str:
+    """Format ``amount`` as USD for SSE / activity strings."""
+    q = amount.quantize(Decimal("0.01"))
+    return f"${format(q, ',.2f')}"
+
+
+def _terminal_sale_prices(db: Session, item_ids: list[int]) -> dict[int, Decimal]:
+    """Map listing id → sale price from the terminal claim or flip row."""
+    if not item_ids:
+        return {}
+    inner = (
+        select(
+            models.Offer.item_id,
+            func.max(models.Offer.id).label("max_oid"),
+        )
+        .where(
+            models.Offer.item_id.in_(item_ids),
+            models.Offer.status.in_(("claimed", "flipped_won", "flipped_lost")),
+        )
+        .group_by(models.Offer.item_id)
+        .subquery()
+    )
+    rows = db.execute(
+        select(models.Offer.item_id, models.Offer.price).join(
+            inner,
+            (models.Offer.item_id == inner.c.item_id)
+            & (models.Offer.id == inner.c.max_oid),
+        )
+    ).all()
+    return {int(iid): price for iid, price in rows}
+
+
+def _item_to_out(
+    item: models.Item, sale_prices: dict[int, Decimal]
+) -> schemas.ItemOut:
+    base = schemas.ItemOut.model_validate(item)
+    if not item.is_sold:
+        return base
+    sp = sale_prices.get(item.id)
+    if sp is None:
+        return base
+    return base.model_copy(update={"sold_price": sp})
+
+
 # ---------------------------------------------------------------------------
 # Items — public reads
 # ---------------------------------------------------------------------------
@@ -747,7 +791,9 @@ def list_items(
     total = int(db.scalar(count_stmt) or 0)
     stmt = stmt.limit(limit).offset(offset)
     items = list(db.scalars(stmt).unique())
-    return schemas.ItemPage(items=items, total=total, limit=limit, offset=offset)
+    sale_prices = _terminal_sale_prices(db, [i.id for i in items if i.is_sold])
+    item_outs = [_item_to_out(i, sale_prices) for i in items]
+    return schemas.ItemPage(items=item_outs, total=total, limit=limit, offset=offset)
 
 
 @app.get(
@@ -772,14 +818,17 @@ def item_types(db: Session = Depends(get_db)):
     summary="Fetch a single listing by id",
     responses=_NOT_FOUND_RESPONSE,
 )
-def get_item(item_id: int, db: Session = Depends(get_db)) -> models.Item:
+def get_item(item_id: int, db: Session = Depends(get_db)) -> schemas.ItemOut:
     """Fetch a single listing by id or 404 if it already left the cupboard."""
     item = db.get(models.Item, item_id)
     if not item:
         raise HTTPException(
             status_code=404, detail="This cup is missing from its saucer."
         )
-    return item
+    sale = (
+        _terminal_sale_prices(db, [item.id]) if item.is_sold else {}
+    )
+    return _item_to_out(item, sale)
 
 
 # ---------------------------------------------------------------------------
@@ -1095,7 +1144,9 @@ def create_offer(
             activity_hub.publish(
                 {
                     "kind": "claim",
-                    "text": f"🎉 @{buyer_name} rehomed a cup",
+                    "text": (
+                        f"🎉 @{buyer_name} rehomed a cup for {_usd_label(offer.price)}"
+                    ),
                 }
             )
         elif kind == "offer":
@@ -1111,7 +1162,8 @@ def create_offer(
                 {
                     "kind": "flip_resolved",
                     "text": (
-                        f"🪙 @{buyer_name} {outcome} the flip — cup rehomed"
+                        f"🪙 @{buyer_name} {outcome} the flip — cup rehomed for "
+                        f"{_usd_label(offer.price)}"
                     ),
                 }
             )
@@ -1297,7 +1349,7 @@ def list_offers(
 def my_items(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user),
-) -> list[models.Item]:
+) -> list[schemas.ItemOut]:
     """All listings owned by the currently authenticated user."""
     stmt = (
         select(models.Item)
@@ -1305,7 +1357,9 @@ def my_items(
         .options(joinedload(models.Item.seller))
         .order_by(models.Item.created_at.desc(), models.Item.id.desc())
     )
-    return list(db.scalars(stmt).unique())
+    items = list(db.scalars(stmt).unique())
+    sale = _terminal_sale_prices(db, [i.id for i in items if i.is_sold])
+    return [_item_to_out(i, sale) for i in items]
 
 
 @app.get(
@@ -1350,7 +1404,7 @@ def my_bids(
 )
 def seller_items(
     username: str, db: Session = Depends(get_db)
-) -> list[models.Item]:
+) -> list[schemas.ItemOut]:
     """Public list of all active listings posted by a given seller handle."""
     seller = db.scalar(select(models.User).where(models.User.username == username))
     if seller is None:
@@ -1361,7 +1415,9 @@ def seller_items(
         .options(joinedload(models.Item.seller))
         .order_by(models.Item.created_at.desc(), models.Item.id.desc())
     )
-    return list(db.scalars(stmt).unique())
+    items = list(db.scalars(stmt).unique())
+    sale = _terminal_sale_prices(db, [i.id for i in items if i.is_sold])
+    return [_item_to_out(i, sale) for i in items]
 
 
 # ---------------------------------------------------------------------------

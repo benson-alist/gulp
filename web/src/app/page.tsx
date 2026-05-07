@@ -287,7 +287,7 @@ export default async function Home() {
             num="02"
             title="Name one price"
             image="/how/price.png"
-            body="Set what you want for it. Add what you paid for a tasteful old-price strikethrough — a good story sells a mug faster than any photo could."
+            body="Set what you want for it. Add an original price for a tasteful old-price strikethrough — a good story sells a mug faster than any photo could."
           />
           <div className="hidden lg:flex items-center justify-center text-[color:var(--accent)] shrink-0 w-14">
             <ScribbleArrow className="w-12 h-8" />

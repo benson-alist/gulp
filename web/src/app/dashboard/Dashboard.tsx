@@ -437,8 +437,8 @@ function BidsTab({
   const outcomeSummary =
     revealBid && revealPhase !== "spinning"
       ? revealBid.flip_outcome === "win"
-        ? `You won · you pay ${formatUSD(revealBid.low_price ?? revealBid.price)}.`
-        : `You lost · you pay ${formatUSD(revealBid.high_price ?? revealBid.price)}.`
+        ? `You won · you pay ${formatUSD(revealBid.low_price ?? revealBid.price)} — cup rehomed for ${formatUSD(revealBid.price)}.`
+        : `You lost · you pay ${formatUSD(revealBid.high_price ?? revealBid.price)} — cup rehomed for ${formatUSD(revealBid.price)}.`
       : null;
 
   if (bids.length === 0) {

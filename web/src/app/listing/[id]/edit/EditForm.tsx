@@ -365,7 +365,7 @@ export default function EditForm({ item }: { item: Item }) {
             className={inputCls}
           />
         </Field>
-        <Field label="What you paid ($, optional)">
+        <Field label="Original price ($, optional)">
           <input
             type="number"
             inputMode="numeric"

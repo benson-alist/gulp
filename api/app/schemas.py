@@ -318,6 +318,10 @@ class ItemOut(ItemBase):
     id: int
     created_at: datetime
     seller: UserOut
+    sold_price: Optional[Money] = Field(
+        default=None,
+        description="Final sale amount when rehomed (claim or settled flip).",
+    )
 
 
 class ItemPage(BaseModel):
