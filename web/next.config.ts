@@ -3,9 +3,12 @@ import type { NextConfig } from "next";
 // Derive the API host from the env var the client uses, so uploaded photos
 // served from the FastAPI ``/uploads/*`` mount pass Next.js' image loader.
 // Falling back to the dev default keeps `npm run dev` zero-config.
-const apiUrl = new URL(
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000",
-);
+//
+// Note: GitHub Actions exports `${{ vars.X }}` as an empty string when the
+// var is unset, and `??` does not treat `""` as missing — so we trim and
+// `||` here to handle undefined, empty, and whitespace-only values uniformly.
+const rawApiUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
+const apiUrl = new URL(rawApiUrl || "http://127.0.0.1:8000");
 
 const nextConfig: NextConfig = {
   images: {

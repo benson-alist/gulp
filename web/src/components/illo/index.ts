@@ -1,8 +1,10 @@
 export { default as BurstSticker } from "./BurstSticker";
+export { default as DrinkwareSilhouette } from "./DrinkwareSilhouette";
 export { default as DividerScribble } from "./DividerScribble";
 export { default as DividerWavy } from "./DividerWavy";
 export { default as Halftone } from "./Halftone";
 export { default as MascotPeek } from "./MascotPeek";
+export { default as GeneratedListingArtSvg } from "./GeneratedListingArtSvg";
 export { default as MotifFlock } from "./MotifFlock";
 export {
   default as MotifSticker,
