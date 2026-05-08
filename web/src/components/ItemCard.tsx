@@ -7,7 +7,12 @@ import {
   discountPct,
   formatUSD,
 } from "@/lib/api";
-import { RehomedStamp, StickerBadge, TapeStrip } from "@/components/illo";
+import {
+  MotifFlock,
+  RehomedStamp,
+  StickerBadge,
+  TapeStrip,
+} from "@/components/illo";
 
 /**
  * Listing card with sticker badges and tape-strip price.
@@ -46,6 +51,7 @@ export default function ItemCard({ item }: { item: Item }) {
             </span>
           </div>
         )}
+        <MotifFlock seed={item.id} baseSize={32} />
         <span className="absolute top-2 left-2 z-10">
           <StickerBadge tone="foreground">{DRINKWARE_LABELS[item.drinkware_type]}</StickerBadge>
         </span>
