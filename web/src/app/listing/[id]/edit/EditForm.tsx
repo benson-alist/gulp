@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import {
   ApiError,
   AcquisitionSource,
-  DRINKWARE_EMOJI,
   DRINKWARE_LABELS,
   DrinkwareType,
   Item,
@@ -14,7 +13,8 @@ import {
   api,
 } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { stockImagesForType } from "@/lib/stockImages";
+import ListingArtPicker from "@/components/ListingArtPicker";
+import { rasterizeSvgToPng } from "@/lib/rasterizeSvgToPng";
 
 const DRINKWARE_TYPES: DrinkwareType[] = [
   "mug",
@@ -37,6 +37,14 @@ const SOURCES: AcquisitionSource[] = [
   "impulse_buy",
 ];
 
+type PhotoMode = "none" | "upload" | "illustration";
+
+function initialPhotoMode(it: Item): PhotoMode {
+  if (it.cover_is_generated) return "illustration";
+  if (it.image_url) return "upload";
+  return "none";
+}
+
 /**
  * Seller-only edit form for a single listing.
  *
@@ -48,6 +56,7 @@ const SOURCES: AcquisitionSource[] = [
 export default function EditForm({ item }: { item: Item }) {
   const router = useRouter();
   const { user, status } = useAuth();
+  const artSvgRef = useRef<SVGSVGElement>(null);
 
   // Gate the form on ownership. The server is the authority; this is UX.
   useEffect(() => {
@@ -77,30 +86,32 @@ export default function EditForm({ item }: { item: Item }) {
   const [error, setError] = useState("");
   const [photoStatus, setPhotoStatus] = useState<"idle" | "uploading">("idle");
   const [photoError, setPhotoError] = useState("");
+  const [photoMode, setPhotoMode] = useState<PhotoMode>(() =>
+    initialPhotoMode(item),
+  );
+  const [artShuffle, setArtShuffle] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    setForm((f) => {
-      if (!f.image_url) return f;
-      const localStock =
-        f.image_url.startsWith("/products/") ||
-        f.image_url.startsWith("/categories/");
-      if (!localStock) return f;
-      if (stockImagesForType(f.drinkware_type).includes(f.image_url)) return f;
-      return { ...f, image_url: null };
-    });
-  }, [form.drinkware_type]);
+    setPhotoMode(initialPhotoMode(item));
+    // Only re-sync when server-provided listing identity / cover fields change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional narrow deps
+  }, [item.id, item.image_url, item.cover_is_generated]);
 
   function update<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((f) => ({ ...f, [key]: value }));
   }
 
-  function selectStockImage(src: string) {
-    setForm((f) => ({
-      ...f,
-      image_url: src,
-      image_emoji: DRINKWARE_EMOJI[f.drinkware_type],
-    }));
+  function chooseIllustrationMode() {
+    setPhotoMode("illustration");
+    update("image_url", null);
+    setPhotoError("");
+  }
+
+  function clearPhoto() {
+    update("image_url", null);
+    setPhotoMode("none");
+    setPhotoError("");
   }
 
   async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -111,6 +122,7 @@ export default function EditForm({ item }: { item: Item }) {
     try {
       const { url } = await api.uploadImage(file);
       update("image_url", url);
+      setPhotoMode("upload");
     } catch (err) {
       setPhotoError(err instanceof Error ? err.message : "Couldn't upload that photo.");
     } finally {
@@ -124,8 +136,32 @@ export default function EditForm({ item }: { item: Item }) {
     setBusy(true);
     setError("");
     try {
+      let image_url: string | null = form.image_url;
+      let cover_is_generated = false;
+
+      if (photoMode === "illustration") {
+        const svg = artSvgRef.current;
+        if (!svg) throw new Error("Illustration preview is not ready yet.");
+        setPhotoStatus("uploading");
+        const png = await rasterizeSvgToPng(svg, 800, 640);
+        const file = new File([png], "gulp-listing-cover.png", {
+          type: "image/png",
+        });
+        const { url } = await api.uploadImage(file);
+        image_url = url;
+        cover_is_generated = true;
+        setPhotoStatus("idle");
+      } else if (photoMode === "upload") {
+        cover_is_generated = false;
+      } else {
+        image_url = null;
+        cover_is_generated = false;
+      }
+
       await api.updateItem(item.id, {
         ...form,
+        image_url,
+        cover_is_generated,
         original_price: form.original_price > 0 ? form.original_price : null,
       });
       router.push(`/listing/${item.id}`);
@@ -140,6 +176,7 @@ export default function EditForm({ item }: { item: Item }) {
       }
     } finally {
       setBusy(false);
+      setPhotoStatus("idle");
     }
   }
 
@@ -265,7 +302,7 @@ export default function EditForm({ item }: { item: Item }) {
         </select>
       </Field>
 
-      <Field label="Photo">
+      <Field label="Listing photo">
         <input
           ref={fileInputRef}
           type="file"
@@ -273,84 +310,117 @@ export default function EditForm({ item }: { item: Item }) {
           className="sr-only"
           onChange={handlePhotoChange}
         />
-        {form.image_url ? (
-          <div className="flex items-start gap-3">
-            <div className="relative w-28 h-28 rounded-xl overflow-hidden border border-[color:var(--border)] bg-[color:var(--card)] shrink-0">
-              <Image
-                src={form.image_url}
-                alt="Listing photo"
-                fill
-                sizes="112px"
-                className="object-cover"
-                unoptimized
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="text-sm px-3 py-1.5 rounded-full border border-[color:var(--border)] hover:bg-[color:var(--card)] min-h-[36px]"
-              >
-                Replace
-              </button>
-              <button
-                type="button"
-                onClick={() => update("image_url", null)}
-                className="text-sm px-3 py-1.5 rounded-full border border-[color:var(--border)] text-[color:var(--muted)] hover:text-[color:var(--danger)] min-h-[36px]"
-              >
-                Remove
-              </button>
-            </div>
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={chooseIllustrationMode}
+              className={`text-xs mono uppercase px-3 py-2 rounded-full border-2 min-h-[40px] transition ${
+                photoMode === "illustration"
+                  ? "border-[color:var(--foreground)] bg-[color:var(--accent)] text-[color:var(--accent-ink)]"
+                  : "border-[color:var(--border)] hover:border-[color:var(--foreground)]"
+              }`}
+            >
+              Auto illustration
+            </button>
+            <button
+              type="button"
+              onClick={() => setPhotoMode("upload")}
+              disabled={photoStatus === "uploading"}
+              className={`text-xs mono uppercase px-3 py-2 rounded-full border-2 min-h-[40px] transition ${
+                photoMode === "upload"
+                  ? "border-[color:var(--foreground)] bg-[color:var(--foreground)] text-[color:var(--background)]"
+                  : "border-[color:var(--border)] hover:border-[color:var(--foreground)]"
+              }`}
+            >
+              Upload photo
+            </button>
+            <button
+              type="button"
+              onClick={clearPhoto}
+              className="text-xs mono uppercase px-3 py-2 rounded-full border-2 border-[color:var(--border)] text-[color:var(--muted)] hover:border-[color:var(--foreground)] min-h-[40px]"
+            >
+              No photo
+            </button>
           </div>
-        ) : (
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={photoStatus === "uploading"}
-            className="min-h-[96px] w-full flex flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-[color:var(--border)] text-sm text-[color:var(--muted)] hover:border-[color:var(--foreground)] hover:text-[color:var(--foreground)] transition disabled:opacity-60"
-          >
-            <span className="text-2xl leading-none" aria-hidden>
-              📸
-            </span>
-            <span>
-              {photoStatus === "uploading" ? "Uploading…" : "Tap to add a photo"}
-            </span>
-            <span className="mono text-[10px] uppercase tracking-wider">
-              or pick a stock image below
-            </span>
-          </button>
-        )}
+
+          {photoMode === "illustration" ? (
+            <div className="flex flex-col gap-2">
+              <ListingArtPicker
+                ref={artSvgRef}
+                drinkwareType={form.drinkware_type}
+                title={form.title}
+                shuffleKey={artShuffle}
+              />
+              <button
+                type="button"
+                onClick={() => setArtShuffle((n) => n + 1)}
+                className="self-start text-xs mono uppercase px-3 py-1.5 rounded-full border border-[color:var(--border)] hover:border-[color:var(--foreground)]"
+              >
+                Shuffle stickers
+              </button>
+              <p className="text-[11px] text-[color:var(--muted)] leading-snug max-w-md">
+                Saving re-rasterizes the scene and uploads a fresh cover (same
+                pipeline as a normal photo).
+              </p>
+            </div>
+          ) : photoMode === "upload" && form.image_url ? (
+            <div className="flex items-start gap-3">
+              <div className="relative w-28 h-28 rounded-xl overflow-hidden border border-[color:var(--border)] bg-[color:var(--card)] shrink-0">
+                <Image
+                  src={form.image_url}
+                  alt="Listing photo"
+                  fill
+                  sizes="112px"
+                  className="object-cover"
+                  unoptimized
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="text-sm px-3 py-1.5 rounded-full border border-[color:var(--border)] hover:bg-[color:var(--card)] min-h-[36px]"
+                >
+                  Replace
+                </button>
+                <button
+                  type="button"
+                  onClick={clearPhoto}
+                  className="text-sm px-3 py-1.5 rounded-full border border-[color:var(--border)] text-[color:var(--muted)] hover:text-[color:var(--danger)] min-h-[36px]"
+                >
+                  Remove
+                </button>
+              </div>
+            </div>
+          ) : photoMode === "upload" ? (
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={photoStatus === "uploading"}
+              className="min-h-[96px] w-full flex flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-[color:var(--border)] text-sm text-[color:var(--muted)] hover:border-[color:var(--foreground)] hover:text-[color:var(--foreground)] transition disabled:opacity-60"
+            >
+              <span className="text-2xl leading-none" aria-hidden>
+                📸
+              </span>
+              <span>
+                {photoStatus === "uploading" ? "Uploading…" : "Tap to add a photo"}
+              </span>
+              <span className="mono text-[10px] uppercase tracking-wider">
+                JPG / PNG / WebP · up to 8 MB
+              </span>
+            </button>
+          ) : (
+            <p className="text-sm text-[color:var(--muted)]">
+              No cover — the listing shows your emoji on a scrapbook card.
+            </p>
+          )}
+        </div>
         {photoError && (
           <div role="alert" className="mt-2 text-[color:var(--danger)] text-xs mono">
             {photoError}
           </div>
         )}
-      </Field>
-
-      <Field label="Or pick a stock image">
-        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-          {stockImagesForType(form.drinkware_type).map((src) => (
-            <button
-              type="button"
-              key={src}
-              onClick={() => selectStockImage(src)}
-              aria-pressed={form.image_url === src}
-              className={`relative aspect-square rounded-xl overflow-hidden border-2 transition ${
-                form.image_url === src
-                  ? "border-[color:var(--foreground)] ring-2 ring-[color:var(--accent)]"
-                  : "border-[color:var(--border)] hover:border-[color:var(--foreground)]"
-              }`}
-            >
-              <Image
-                src={src}
-                alt=""
-                fill
-                sizes="120px"
-                className="object-cover"
-              />
-            </button>
-          ))}
-        </div>
       </Field>
 
       <div className="grid grid-cols-2 gap-3">

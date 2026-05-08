@@ -257,6 +257,11 @@ class ItemBase(BaseModel):
     years_in_cupboard: int = Field(default=1, ge=0, le=60)
     image_emoji: str = "☕️"
     image_url: Optional[str] = Field(default=None, max_length=500)
+    cover_is_generated: bool = Field(
+        default=False,
+        description="True when image_url is a client-rasterized auto-cover "
+        "(skip live decal overlay in the storefront).",
+    )
     price: Money = Field(..., ge=Decimal("0"))
     original_price: Optional[Money] = None
     is_sold: bool = False
@@ -297,6 +302,7 @@ class ItemUpdate(BaseModel):
     years_in_cupboard: Optional[int] = Field(default=None, ge=0, le=60)
     image_emoji: Optional[str] = Field(default=None, max_length=16)
     image_url: Optional[str] = Field(default=None, max_length=500)
+    cover_is_generated: Optional[bool] = None
     price: Optional[Money] = Field(default=None, ge=Decimal("0"))
     original_price: Optional[Money] = None
     is_sold: Optional[bool] = None

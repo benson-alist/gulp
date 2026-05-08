@@ -72,6 +72,8 @@ export type Item = {
   is_sold: boolean;
   /** Final sale price when rehomed (claim or settled flip); omitted if unknown. */
   sold_price?: number | null;
+  /** True when `image_url` is a client-rasterized auto-cover (skip live decals). */
+  cover_is_generated?: boolean;
   created_at: string;
   seller: User;
 };
@@ -212,6 +214,7 @@ export type ItemCreateInput = {
   years_in_cupboard: number;
   image_emoji?: string;
   image_url?: string | null;
+  cover_is_generated?: boolean;
   price: number;
   original_price?: number | null;
 };

@@ -83,7 +83,9 @@ export default async function ListingPage({
                 {item.image_emoji}
               </span>
             )}
-            <MotifFlock seed={item.id} baseSize={52} />
+            {!item.cover_is_generated && (
+              <MotifFlock seed={item.id} baseSize={52} />
+            )}
             <span className="absolute top-4 left-4 z-10">
               <StickerBadge tone="foreground">
                 {DRINKWARE_LABELS[item.drinkware_type]} · {item.size_oz}oz

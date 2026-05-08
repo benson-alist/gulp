@@ -141,6 +141,9 @@ class Item(Base):
     years_in_cupboard: Mapped[int] = mapped_column(Integer, default=1)
     image_emoji: Mapped[str] = mapped_column(String(16), default="☕️")
     image_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    cover_is_generated: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default="false"
+    )
     price: Mapped[Decimal] = mapped_column(Numeric(10, 2))
     original_price: Mapped[Optional[Decimal]] = mapped_column(
         Numeric(10, 2), nullable=True
