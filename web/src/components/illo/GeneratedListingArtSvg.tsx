@@ -2,15 +2,16 @@
 
 import { forwardRef, useMemo } from "react";
 import type { DrinkwareType } from "@/lib/api";
+import { mixHex } from "@/lib/cupColorUtils";
 import {
   artSlotTopLeft,
   computeArtStickerPlacements,
-  rngFrom,
 } from "@/lib/listingArtPlacements";
+import { pickCuratedPalette } from "@/lib/listingArtPalettes";
 import DrinkwareSilhouette from "./DrinkwareSilhouette";
 import type { MotifPalette } from "./MotifSticker";
 import { MotifStickerSvgBody } from "./MotifSticker";
-import { STICKER_TONES, type StickerTone } from "./stickerTones";
+import type { StickerTone } from "./stickerTones";
 
 const VIEW_W = 400;
 const VIEW_H = 320;
@@ -36,18 +37,20 @@ const GeneratedListingArtSvg = forwardRef<
   const gradId = useMemo(() => `gulp-art-grad-${seed}`, [seed]);
   const shadowId = useMemo(() => `gulp-art-shadow-${seed}`, [seed]);
 
-  const { stops, cupFill, placements } = useMemo(() => {
-    const rng = rngFrom(seed);
-    const tA = STICKER_TONES[Math.floor(rng() * STICKER_TONES.length)];
-    const tB = STICKER_TONES[Math.floor(rng() * STICKER_TONES.length)];
-    const tCup =
-      STICKER_TONES[Math.floor(rng() * STICKER_TONES.length)];
+  const { curated, placements, halftoneColor, halftoneOpacity } = useMemo(() => {
+    const c = pickCuratedPalette(seed);
+    const ht =
+      c.mood === "light"
+        ? mixHex(palette.stroke, "#ffffff", 0.52)
+        : mixHex(palette.stroke, "#1a1a1a", 0.18);
+    const ho = c.mood === "light" ? 0.1 : 0.16;
     return {
-      stops: { a: toneHex[tA], b: toneHex[tB] },
-      cupFill: toneHex[tCup],
+      curated: c,
       placements: computeArtStickerPlacements(seed, { baseSize: 56 }),
+      halftoneColor: ht,
+      halftoneOpacity: ho,
     };
-  }, [seed, toneHex]);
+  }, [seed, palette.stroke]);
 
   const dots = useMemo(() => {
     const out: { cx: number; cy: number; key: string }[] = [];
@@ -74,45 +77,47 @@ const GeneratedListingArtSvg = forwardRef<
     >
       <defs>
         <linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor={stops.a} />
-          <stop offset="100%" stopColor={stops.b} />
+          <stop offset="0%" stopColor={curated.bgA} />
+          <stop offset="100%" stopColor={curated.bgB} />
         </linearGradient>
         <filter
           id={shadowId}
-          x="-30%"
-          y="-30%"
-          width="160%"
-          height="160%"
+          x="-35%"
+          y="-35%"
+          width="170%"
+          height="170%"
         >
           <feDropShadow
-            dx="2.2"
-            dy="2.2"
-            stdDeviation="0.2"
+            dx="1.8"
+            dy="2.8"
+            stdDeviation="1.35"
             floodColor={palette.stroke}
-            floodOpacity="1"
+            floodOpacity="0.34"
           />
         </filter>
       </defs>
 
       <rect width="100%" height="100%" fill={`url(#${gradId})`} />
 
-      <g opacity={0.14}>
+      <g opacity={halftoneOpacity}>
         {dots.map((d) => (
           <circle
             key={d.key}
             cx={d.cx}
             cy={d.cy}
             r={1.25}
-            fill={palette.stroke}
+            fill={halftoneColor}
           />
         ))}
       </g>
 
       <g transform="translate(100, 42)">
         <DrinkwareSilhouette
+          defsIdPrefix={`cup-${seed}`}
           drinkware={drinkware}
-          fill={cupFill}
+          fill={curated.cup}
           stroke={palette.stroke}
+          accent={curated.accent}
         />
       </g>
 
